@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { query } from "./_generated/server";
+import { action } from "./_generated/server";
 import { autumn } from "./autumn";
 
 /**
@@ -15,7 +15,7 @@ import { autumn } from "./autumn";
  * @throws {ConvexError} 404 severity - User is not authenticated or session is invalid
  * @throws {ConvexError} 404 severity - Autumn returned an invalid or empty response
  */
-export const hasEntitlement = query({
+export const hasEntitlement = action({
   args: {
     featureId: v.string(),
   },

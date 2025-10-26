@@ -1,3 +1,5 @@
+"use client";
+
 import { CheckoutDialog, useCustomer } from "autumn-js/react";
 import { Button } from "@/components/ui/button";
 

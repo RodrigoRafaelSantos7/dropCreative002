@@ -1,4 +1,4 @@
-import { preloadQuery } from "convex/nextjs";
+import { fetchAction, preloadQuery } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import { getToken } from "@/lib/auth-server";
@@ -90,7 +90,7 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
 
     // Query Autumn system to verify user's entitlement for the requested feature
     log.info("Fetching entitlement");
-    const entitlement = await preloadQuery(
+    const entitlement = await fetchAction(
       api.subscription.hasEntitlement,
       {
         featureId,
