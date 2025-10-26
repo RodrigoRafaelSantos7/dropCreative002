@@ -1,6 +1,5 @@
 import { preloadQuery } from "convex/nextjs";
 import { ConvexError } from "convex/values";
-import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { getToken } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
@@ -43,9 +42,6 @@ const ProfileQuery = async () => {
       error instanceof ConvexError
         ? (error.data as { message: string }).message
         : "Unexpected error occurred";
-
-    // Notify user of the error through UI
-    toast.error(errorMessage);
 
     // Wrap error in ConvexError for consistent error handling upstream
     throw new ConvexError({
@@ -115,8 +111,6 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
       error instanceof ConvexError
         ? (error.data as { message: string }).message
         : "Unexpected error occurred";
-    // Notify user of the error through UI
-    toast.error(errorMessage);
 
     // Wrap error in ConvexError for consistent error handling upstream
     throw new ConvexError({
