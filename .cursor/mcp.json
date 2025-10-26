@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "convex": {
+      "command": "npx -y convex@latest mcp start",
+      "env": {},
+      "args": []
+    },
+    "Better Auth": {
+      "url": "https://mcp.chonkie.ai/better-auth/better-auth-builder/mcp",
+      "headers": {}
+    },
+    "Autumn Docs": {
+      "name": "Autumn Docs",
+      "url": "https://docs.useautumn.com/mcp",
+      "headers": {}
+    }
+  }
+}
