@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
-import { AutumnWrapper } from "@/components/providers/autumn-wrapper";
-import { ConvexClientProvider } from "@/components/providers/convex-client-provider";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { AutumnWrapper } from "@/components/autumn/autumn-wrapper";
+import { ConvexClientProvider } from "@/components/convex/convex-client-provider";
+import { ThemeProvider } from "@/components/theme/theme-provider";
 
 const Providers = ({ children }: { children: ReactNode }) => (
   <ThemeProvider
