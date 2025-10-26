@@ -11,19 +11,19 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 
-const SignUpForm = () => (
+const SignInForm = () => (
   <form>
     <FieldGroup>
       <FieldSet>
-        <FieldLegend>Create a DropCreative Account</FieldLegend>
+        <FieldLegend>Welcome Back</FieldLegend>
         <FieldDescription>
-          Welcome! Create an account to get started
+          Please enter your details to sign in.
         </FieldDescription>
 
         <Field>
           <Button type="button" variant="outline">
             <Google />
-            Continue with Google
+            Login with Google
           </Button>
         </Field>
 
@@ -47,4 +47,4 @@ const SignUpForm = () => (
   </form>
 );
 
-export { SignUpForm };
+export { SignInForm };

@@ -4,7 +4,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { signInPath } from "@/paths";
 import { SignUpForm } from "./_components/sign-up-form";
 
-const SignUpPage = () => (
+const Page = () => (
   <section className="flex min-h-dvh w-full items-center justify-center">
     <Card className="w-full max-w-sm pb-0">
       <CardContent>
@@ -28,4 +28,4 @@ const SignUpPage = () => (
   </section>
 );
 
-export default SignUpPage;
+export default Page;
