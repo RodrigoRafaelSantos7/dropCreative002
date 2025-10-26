@@ -6,7 +6,7 @@ import { SignUpForm } from "./_components/sign-up-form";
 
 const Page = () => (
   <section className="flex min-h-dvh w-full items-center justify-center">
-    <Card className="w-full max-w-sm pb-0">
+    <Card className="mx-4 w-full max-w-sm pb-0 md:mx-auto">
       <CardContent>
         <SignUpForm />
       </CardContent>

@@ -35,7 +35,7 @@ const SignUpForm = () => {
         <FieldSet>
           <FieldLegend>Create an account</FieldLegend>
           <FieldDescription>
-            Please enter your name, email and password to sign up.
+            Please enter your name, email and password to create an account.
           </FieldDescription>
 
           <Field>

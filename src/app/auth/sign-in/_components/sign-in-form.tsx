@@ -34,8 +34,8 @@ const SignInForm = () => {
       <FieldGroup>
         <FieldSet>
           <FieldLegend>Welcome Back!</FieldLegend>
-          <FieldDescription>
-            Please enter your email and password to sign in.
+          <FieldDescription className="">
+            Please enter your email and password to sign in to your account.
           </FieldDescription>
 
           <Field>
