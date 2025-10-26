@@ -17,7 +17,7 @@ const SignUpForm = () => (
       <FieldSet>
         <FieldLegend>Create a DropCreative Account</FieldLegend>
         <FieldDescription>
-          Welcome! Create an account to get started
+          Welcome! Create an account to get started.
         </FieldDescription>
 
         <Field>
@@ -32,6 +32,11 @@ const SignUpForm = () => (
         </FieldSeparator>
 
         <Field>
+          <FieldLabel htmlFor="name">Name</FieldLabel>
+          <Input id="name" placeholder="Your Name" required type="text" />
+        </Field>
+
+        <Field>
           <FieldLabel htmlFor="email">Email</FieldLabel>
           <Input id="email" placeholder="m@example.com" required type="email" />
         </Field>
@@ -41,10 +46,14 @@ const SignUpForm = () => (
           <Input id="password" required type="password" />
         </Field>
 
+        <Field>
+          <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+          <Input id="confirmPassword" required type="password" />
+        </Field>
+
         <Button className="w-full">Continue</Button>
       </FieldSet>
     </FieldGroup>
   </form>
 );
-
 export { SignUpForm };

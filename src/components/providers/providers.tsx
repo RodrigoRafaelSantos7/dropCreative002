@@ -15,7 +15,7 @@ const Providers = ({ children }: { children: ReactNode }) => (
     <ConvexClientProvider>
       <AutumnWrapper>
         {children}
-        <Toaster />
+        <Toaster richColors />
       </AutumnWrapper>
     </ConvexClientProvider>
   </ThemeProvider>
