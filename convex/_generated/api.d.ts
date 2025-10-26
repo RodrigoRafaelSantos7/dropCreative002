@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as autumn from "../autumn.js";
 import type * as http from "../http.js";
 
 import type {
@@ -27,6 +28,7 @@ import type {
  */
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  autumn: typeof autumn;
   http: typeof http;
 }>;
 declare const fullApiWithMounts: typeof fullApi;
@@ -2140,4 +2142,5 @@ export declare const components: {
       updateMany: FunctionReference<"mutation", "internal", any, any>;
     };
   };
+  autumn: {};
 };
