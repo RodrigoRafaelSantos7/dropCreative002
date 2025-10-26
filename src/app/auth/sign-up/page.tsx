@@ -1,0 +1,31 @@
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { signInPath } from "@/paths";
+import { SignUpForm } from "./_components/sign-up-form";
+
+const SignUpPage = () => (
+  <section className="flex min-h-dvh w-full items-center justify-center">
+    <Card className="w-full max-w-sm pb-0">
+      <CardContent>
+        <SignUpForm />
+      </CardContent>
+
+      {/* Footer*/}
+      <CardFooter className="m-0.5 flex h-16 items-center justify-center rounded-xl border bg-muted">
+        <p className="text-accent-foreground text-sm">
+          Already have an account ?
+          <Link
+            className={buttonVariants({ variant: "link", size: "sm" })}
+            href={signInPath()}
+            prefetch
+          >
+            Sign In
+          </Link>
+        </p>
+      </CardFooter>
+    </Card>
+  </section>
+);
+
+export default SignUpPage;
