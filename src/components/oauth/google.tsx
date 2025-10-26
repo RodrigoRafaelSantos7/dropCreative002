@@ -3,11 +3,12 @@ import { Button } from "../ui/button";
 
 type GoogleButtonProps = {
   handler: () => void;
+  label: string;
 };
-const GoogleButton = ({ handler }: GoogleButtonProps) => (
+const GoogleButton = ({ handler, label }: GoogleButtonProps) => (
   <Button onClick={handler} type="button" variant="outline">
     <Google />
-    Continue with Google
+    {label}
   </Button>
 );
 

@@ -39,7 +39,10 @@ const SignInForm = () => {
           </FieldDescription>
 
           <Field>
-            <GoogleButton handler={handleSignInWithGoogle} />
+            <GoogleButton
+              handler={handleSignInWithGoogle}
+              label="Continue with Google"
+            />
           </Field>
 
           <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
