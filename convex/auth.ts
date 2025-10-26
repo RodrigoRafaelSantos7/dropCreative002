@@ -55,6 +55,7 @@ export const createAuth = (
  * @throws {ConvexError} If no user is authenticated (404 error)
  */
 export const getCurrentUser = query({
+  args: {},
   handler: async (ctx) => {
     const user = await authComponent.getAuthUser(ctx);
 
