@@ -46,7 +46,7 @@ const signUpSchema = z
   })
   .refine((data) => data.password === data.confirmPassword, {
     path: ["confirmPassword"],
-    message: "Passwords do not match",
+    message: "The passwords you entered do not match",
   });
 
 type SignInFormData = z.infer<typeof signInSchema>;
@@ -73,6 +73,7 @@ export const useAuth = () => {
 
   const signUpForm = useForm({
     defaultValues: {
+      name: "",
       email: "",
       password: "",
       confirmPassword: "",
@@ -80,6 +81,9 @@ export const useAuth = () => {
     validators: {
       onChange: signUpSchema,
       onSubmit: signUpSchema,
+    },
+    onSubmit: async (data) => {
+      await handleSignUp(data.value);
     },
   });
 
