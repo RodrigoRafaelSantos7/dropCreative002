@@ -1,8 +1,10 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
+import { ConvexError } from "convex/values";
 import { components } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
+import { query } from "./_generated/server";
 
 const siteUrl =
   process.env.SITE_URL ??
@@ -42,5 +44,28 @@ export const createAuth = (
       // The Convex plugin is required for Convex compatibility
       convex(),
     ],
+    args: {},
   });
 };
+
+/**
+ * Retrieves the currently authenticated user.
+ *
+ * @returns The authenticated user object
+ * @throws {ConvexError} If no user is authenticated (404 error)
+ */
+export const getCurrentUser = query({
+  handler: async (ctx) => {
+    const user = await authComponent.getAuthUser(ctx);
+
+    if (!user) {
+      throw new ConvexError({
+        code: 404,
+        message: "There is no authenticated user. Please sign in to continue.",
+        severity: "high",
+      });
+    }
+
+    return user;
+  },
+});
