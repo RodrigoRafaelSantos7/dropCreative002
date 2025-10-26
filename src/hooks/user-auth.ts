@@ -101,6 +101,7 @@ export const useAuth = () => {
               description:
                 "You will be redirected to the dashboard in a moment...",
             });
+            router.push(dashboardPath());
           },
           onError: (error) => {
             log.error(error.error);
@@ -131,10 +132,12 @@ export const useAuth = () => {
         callbackURL: dashboardPath(),
         fetchOptions: {
           onSuccess: () => {
+            log.info("Signed up successfully");
             toast.success("Signed up successfully", {
               description:
                 "You will be redirected to the dashboard in a moment...",
             });
+            router.push(dashboardPath());
           },
           onError: (error) => {
             log.error(error.error);

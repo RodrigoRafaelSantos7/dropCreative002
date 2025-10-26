@@ -88,6 +88,7 @@ const SignInForm = () => {
                     name={field.name}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="********"
                     required
                     type="password"
                     value={field.state.value}

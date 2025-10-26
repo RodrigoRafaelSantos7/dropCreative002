@@ -1,8 +1,11 @@
-import Google from "@/components/icons/google";
+"use client";
+
+import { GoogleButton } from "@/components/oauth/google";
 import { Button } from "@/components/ui/button";
 import {
   Field,
   FieldDescription,
+  FieldError,
   FieldGroup,
   FieldLabel,
   FieldLegend,
@@ -10,50 +13,156 @@ import {
   FieldSet,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { useAuth } from "@/hooks/user-auth";
 
-const SignUpForm = () => (
-  <form>
-    <FieldGroup>
-      <FieldSet>
-        <FieldLegend>Create a DropCreative Account</FieldLegend>
-        <FieldDescription>
-          Welcome! Create an account to get started.
-        </FieldDescription>
+const SignUpForm = () => {
+  const { signUpForm, handleSignUp, isLoading, handleSignInWithGoogle } =
+    useAuth();
 
-        <Field>
-          <Button type="button" variant="outline">
-            <Google />
-            Continue with Google
+  const { handleSubmit } = signUpForm;
+
+  return (
+    <form
+      id="sign-up-form"
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        handleSubmit(handleSignUp);
+      }}
+    >
+      <FieldGroup>
+        <FieldSet>
+          <FieldLegend>Create an account</FieldLegend>
+          <FieldDescription>
+            Please enter your name, email and password to sign up.
+          </FieldDescription>
+
+          <Field>
+            <GoogleButton
+              handler={handleSignInWithGoogle}
+              label="Continue with Google"
+            />
+          </Field>
+
+          <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
+            Or continue with
+          </FieldSeparator>
+
+          <signUpForm.Field name="name">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Name</FieldLabel>
+                  <Input
+                    aria-invalid={isInvalid}
+                    autoComplete="email"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="Your Name"
+                    required
+                    type="text"
+                    value={field.state.value}
+                  />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                </Field>
+              );
+            }}
+          </signUpForm.Field>
+
+          <signUpForm.Field name="email">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Email</FieldLabel>
+                  <Input
+                    aria-invalid={isInvalid}
+                    autoComplete="email"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="m@example.com"
+                    required
+                    type="email"
+                    value={field.state.value}
+                  />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                </Field>
+              );
+            }}
+          </signUpForm.Field>
+
+          <signUpForm.Field name="password">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Password</FieldLabel>
+                  <Input
+                    aria-invalid={isInvalid}
+                    autoComplete="password"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="********"
+                    required
+                    type="password"
+                    value={field.state.value}
+                  />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                </Field>
+              );
+            }}
+          </signUpForm.Field>
+
+          <signUpForm.Field name="confirmPassword">
+            {(field) => {
+              const isInvalid =
+                field.state.meta.isTouched && !field.state.meta.isValid;
+              return (
+                <Field data-invalid={isInvalid}>
+                  <FieldLabel htmlFor={field.name}>Confirm Password</FieldLabel>
+                  <Input
+                    aria-invalid={isInvalid}
+                    autoComplete="password"
+                    id={field.name}
+                    name={field.name}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="********"
+                    required
+                    type="password"
+                    value={field.state.value}
+                  />
+                  {isInvalid && <FieldError errors={field.state.meta.errors} />}
+                </Field>
+              );
+            }}
+          </signUpForm.Field>
+
+          <Button className="w-full" disabled={isLoading} type="submit">
+            {isLoading ? (
+              <>
+                <Spinner />
+                Signing up...
+              </>
+            ) : (
+              "Sign Up"
+            )}
           </Button>
-        </Field>
+        </FieldSet>
+      </FieldGroup>
+    </form>
+  );
+};
 
-        <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
-          Or continue with
-        </FieldSeparator>
-
-        <Field>
-          <FieldLabel htmlFor="name">Name</FieldLabel>
-          <Input id="name" placeholder="Your Name" required type="text" />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="email">Email</FieldLabel>
-          <Input id="email" placeholder="m@example.com" required type="email" />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="password">Password</FieldLabel>
-          <Input id="password" required type="password" />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
-          <Input id="confirmPassword" required type="password" />
-        </Field>
-
-        <Button className="w-full">Continue</Button>
-      </FieldSet>
-    </FieldGroup>
-  </form>
-);
 export { SignUpForm };
