@@ -101,7 +101,6 @@ export const useAuth = () => {
               description:
                 "You will be redirected to the dashboard in a moment...",
             });
-            router.push(dashboardPath());
           },
           onError: (error) => {
             log.error(error.error);
@@ -136,7 +135,6 @@ export const useAuth = () => {
               description:
                 "You will be redirected to the dashboard in a moment...",
             });
-            router.push(dashboardPath());
           },
           onError: (error) => {
             log.error(error.error);
@@ -149,6 +147,39 @@ export const useAuth = () => {
     } catch (error) {
       log.error(error);
       toast.error("Failed to sign up", {
+        description:
+          "Please try again... If the problem persists, contact support.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignInWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: dashboardPath(),
+        errorCallbackURL: signInPath(),
+        fetchOptions: {
+          onSuccess: () => {
+            toast.success("Signed in with Google successfully", {
+              description:
+                "You will be redirected to the dashboard in a moment...",
+            });
+          },
+          onError: (error) => {
+            log.error(error.error);
+            toast.error("Failed to sign in with Google", {
+              description: error.error.message,
+            });
+          },
+        },
+      });
+    } catch (error) {
+      log.error(error);
+      toast.error("Failed to sign in with Google", {
         description:
           "Please try again... If the problem persists, contact support.",
       });
@@ -189,6 +220,7 @@ export const useAuth = () => {
     handleSignIn,
     handleSignUp,
     handleSignOut,
+    handleSignInWithGoogle,
     isLoading,
   };
 };

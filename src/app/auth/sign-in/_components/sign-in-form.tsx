@@ -1,6 +1,6 @@
 "use client";
 
-import Google from "@/components/icons/google";
+import { GoogleButton } from "@/components/oauth/google";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -17,7 +17,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/hooks/user-auth";
 
 const SignInForm = () => {
-  const { signInForm, handleSignIn, isLoading } = useAuth();
+  const { signInForm, handleSignIn, isLoading, handleSignInWithGoogle } =
+    useAuth();
 
   const { handleSubmit } = signInForm;
 
@@ -38,10 +39,7 @@ const SignInForm = () => {
           </FieldDescription>
 
           <Field>
-            <Button type="button" variant="outline">
-              <Google />
-              Login with Google
-            </Button>
+            <GoogleButton handler={handleSignInWithGoogle} />
           </Field>
 
           <FieldSeparator className="*:data-[slot=field-separator-content]:bg-card">
