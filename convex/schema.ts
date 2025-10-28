@@ -14,7 +14,9 @@ const schema = defineSchema({
 
     lastModified: v.number(), // Timestamo for Last Modification
     createdAt: v.number(), // Project creation timestamp
-  }).index("by_userId", ["userId"]),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_userId_lastModified", ["userId", "lastModified"]),
 
   projects_counters: defineTable({
     userId: v.string(),

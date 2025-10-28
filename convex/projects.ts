@@ -178,3 +178,42 @@ async function getNextProjectNumber(
 
   return projectNumber;
 }
+
+export const getUserProjects = query({
+  args: {
+    userId: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, { userId, limit = 20 }) => {
+    console.log("🚀 [Convex] Getting user projects for user:", { userId });
+    console.log("📚 [Convex] Limiting to:", { limit });
+
+    console.log("🔍 [Convex] Querying projects...");
+    const allProjects = await ctx.db
+      .query("projects")
+      .withIndex("by_userId_lastModified", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+
+    console.log("✅ [Convex] Projects fetched:", {
+      allProjects: allProjects.length,
+    });
+
+    const projects = allProjects.slice(0, limit);
+
+    console.log("📝 [Convex] Projects to return:", {
+      projects: projects.length,
+    });
+    console.log("🔍 [Convex] Returning Projects:", { projects });
+
+    return projects.map((project) => ({
+      _id: project._id,
+      name: project.name,
+      projectNumber: project.projectNumber,
+      thumbnail: project.thumbnail,
+      lastModified: project.lastModified,
+      createdAt: project.createdAt,
+      isPublic: project.isPublic,
+    }));
+  },
+});
