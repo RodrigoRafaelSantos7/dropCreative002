@@ -1,6 +1,6 @@
 "use client";
 
-import { GoogleButton } from "@/components/oauth/google";
+import { GoogleButton } from "@/components/buttons/oauth/google";
 import { Button } from "@/components/ui/button";
 import {
   Field,

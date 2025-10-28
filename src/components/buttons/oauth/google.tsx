@@ -1,5 +1,5 @@
-import Google from "../icons/google";
-import { Button } from "../ui/button";
+import Google from "@/components/icons/google";
+import { Button } from "@/components/ui/button";
 
 type GoogleButtonProps = {
   handler: () => void;
