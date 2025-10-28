@@ -52,6 +52,29 @@ export const getProject = query({
   },
 });
 
+/**
+ * Creates a new project for a user with optional metadata.
+ *
+ * Implements an auto-incrementing project numbering system per user, ensuring
+ * each user has sequentially numbered projects (Project 1, Project 2, etc.).
+ *
+ * If no name is provided, generates a default name using the project number.
+ * All projects are created as private by default (isPublic: false).
+ *
+ * @param userId - The authenticated user creating the project
+ * @param name - Optional custom project name. Defaults to "Project {number}"
+ * @param sketchData - The complete Redux shapes state as JSON (required)
+ * @param thumbnail - Optional base64-encoded thumbnail image
+ * @returns Project metadata including ID, name, number, and timestamps
+ *
+ * @example
+ * await createProject({
+ *   userId: "user123",
+ *   name: "My Sketch",
+ *   sketchData: { shapes: [...] },
+ *   thumbnail: "data:image/png;base64,..."
+ * });
+ */
 export const createProject = mutation({
   args: {
     userId: v.string(),
@@ -62,12 +85,18 @@ export const createProject = mutation({
   handler: async (ctx, { userId, name, sketchData, thumbnail }) => {
     console.log("🚀 [Convex] Creating project for user:", { userId });
 
+    // Get the next sequential project number for this user
+    // This ensures each user has their own independent project numbering
     const projectNumber = await getNextProjectNumber(ctx, userId);
+
+    // Use provided name or generate default "Project {number}"
     const projectName = name || `Project ${projectNumber}`;
 
+    // Track creation and modification timestamps (initially the same)
     const lastModified = Date.now();
     const createdAt = Date.now();
 
+    // Persist project to database with all metadata
     const projectId = await ctx.db.insert("projects", {
       userId,
       name: projectName,
@@ -76,15 +105,16 @@ export const createProject = mutation({
       projectNumber,
       lastModified,
       createdAt,
-      isPublic: false,
+      isPublic: false, // New projects are private by default
     });
 
     console.log("✅ [Convex] Project created:", {
       projectId,
-      mame: projectName,
+      name: projectName,
       projectNumber,
     });
 
+    // Return essential metadata for client-side state management
     return {
       projectId,
       name: projectName,
@@ -95,23 +125,55 @@ export const createProject = mutation({
   },
 });
 
+/**
+ * Manages per-user project numbering with atomic counter updates.
+ *
+ * This function implements a sequence generation pattern to ensure each user
+ * gets unique, sequential project numbers. The counter is stored in a separate
+ * "projects_counters" table and is incremented atomically to prevent race conditions.
+ *
+ * Strategy:
+ * - First project for a user: returns 1, creates counter starting at 2
+ * - Subsequent projects: returns current counter value, increments to next number
+ *
+ * Why a separate counter table instead of counting existing projects?
+ * - Performance: O(1) lookup vs O(n) query across all projects
+ * - Atomicity: Prevents duplicate numbers in concurrent scenarios
+ * - Consistency: Survives project deletions (numbers never decrease or get reused)
+ *
+ * @param ctx - The mutation context for database access
+ * @param userId - The user to get the next project number for
+ * @returns The next available project number for this user
+ *
+ * @example
+ * // First call for user123: returns 1, creates counter[nextNumber: 2]
+ * const num1 = await getNextProjectNumber(ctx, "user123"); // 1
+ *
+ * // Second call: returns 2, updates counter[nextNumber: 3]
+ * const num2 = await getNextProjectNumber(ctx, "user123"); // 2
+ */
 async function getNextProjectNumber(
   ctx: MutationCtx,
   userId: string
 ): Promise<number> {
+  // Lookup existing counter for this user using indexed query
   const counter = await ctx.db
     .query("projects_counters")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .first();
 
   if (!counter) {
-    // Create a new counter for the user starting at 1
+    // First project ever for this user
+    // Return 1 and initialize counter to 2 for next project
     await ctx.db.insert("projects_counters", { userId, nextProjectNumber: 2 });
     return 1;
   }
 
+  // Extract the next project number to assign
   const projectNumber = counter.nextProjectNumber;
 
+  // Atomically increment counter for next project creation
+  // This happens in a transaction with the project insertion
   await ctx.db.patch(counter._id, { nextProjectNumber: projectNumber + 1 });
 
   return projectNumber;
