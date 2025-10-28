@@ -16,13 +16,13 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { cn } from "@/lib/utils";
 import { canvasPath, dashboardPath, styleGuidePath } from "@/paths";
 import { useAppSelector } from "@/redux/store";
+import { CreateProject } from "../buttons/project";
 
 type TabProps = {
   label: string;
   href: string;
   icon: React.ReactNode;
 };
-
 const Navbar = () => {
   const params = useSearchParams();
   const projectId = params.get("project");
@@ -107,11 +107,16 @@ const Navbar = () => {
           <CircleQuestionMarkIcon className="size-5 text-white" />
         </Button>
         <Avatar className="ml-2 size-12">
-          <AvatarImage src={me.image || ""} />
+          <AvatarImage
+            referrerPolicy="no-referrer"
+            src={me.image || `https://avatar.vercel.sh/${me.name}`}
+          />
           <AvatarFallback>
             <UserIcon className="size-5 text-black" />
           </AvatarFallback>
         </Avatar>
+
+        {!(hasCanvas || hasStyleGuide) && <CreateProject />}
       </div>
     </nav>
   );

@@ -28,11 +28,8 @@ const ProfileQuery = async () => {
         ? (error.data as { message: string }).message
         : "Unexpected error occurred";
 
-    throw new ConvexError({
-      code: 500,
-      message: errorMessage,
-      severity: "high",
-    });
+    log.error(errorMessage);
+    return null;
   }
 };
 

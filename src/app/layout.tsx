@@ -27,7 +27,7 @@ export default async function RootLayout({
 }>) {
   const rawProfile = await ProfileQuery();
   const profile = normalizeProfile(
-    rawProfile._valueJSON as unknown as ConvexRawUser | null
+    rawProfile?._valueJSON as unknown as ConvexRawUser | null
   );
 
   return (
@@ -35,7 +35,7 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Providers profile={{ profile }}>{children}</Providers>
+        <Providers profile={profile}>{children}</Providers>
       </body>
     </html>
   );

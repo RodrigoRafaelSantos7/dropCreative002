@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { api } from "./_generated/api";
-import { query } from "./_generated/server";
+import { type MutationCtx, mutation, query } from "./_generated/server";
 
 /**
  * Get a project by ID.
@@ -13,16 +13,6 @@ export const getProject = query({
   args: {
     projectId: v.id("projects"),
   },
-  returns: v.object({
-    _id: v.id("projects"),
-    _creationTime: v.number(),
-    userId: v.id("user"),
-    name: v.string(),
-    description: v.optional(v.string()),
-    isPublic: v.boolean(),
-    updatedAt: v.number(),
-    createdAt: v.number(),
-  }),
   handler: async (ctx, { projectId }) => {
     /**
      * Authenticate the requesting user.
@@ -61,3 +51,68 @@ export const getProject = query({
     return project;
   },
 });
+
+export const createProject = mutation({
+  args: {
+    userId: v.string(),
+    name: v.optional(v.string()),
+    sketchData: v.any(), // JSON Structure from Redux Shapes State
+    thumbnail: v.optional(v.string()),
+  },
+  handler: async (ctx, { userId, name, sketchData, thumbnail }) => {
+    console.log("🚀 [Convex] Creating project for user:", { userId });
+
+    const projectNumber = await getNextProjectNumber(ctx, userId);
+    const projectName = name || `Project ${projectNumber}`;
+
+    const lastModified = Date.now();
+    const createdAt = Date.now();
+
+    const projectId = await ctx.db.insert("projects", {
+      userId,
+      name: projectName,
+      sketchData,
+      thumbnail,
+      projectNumber,
+      lastModified,
+      createdAt,
+      isPublic: false,
+    });
+
+    console.log("✅ [Convex] Project created:", {
+      projectId,
+      mame: projectName,
+      projectNumber,
+    });
+
+    return {
+      projectId,
+      name: projectName,
+      projectNumber,
+      lastModified,
+      createdAt,
+    };
+  },
+});
+
+async function getNextProjectNumber(
+  ctx: MutationCtx,
+  userId: string
+): Promise<number> {
+  const counter = await ctx.db
+    .query("projects_counters")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .first();
+
+  if (!counter) {
+    // Create a new counter for the user starting at 1
+    await ctx.db.insert("projects_counters", { userId, nextProjectNumber: 2 });
+    return 1;
+  }
+
+  const projectNumber = counter.nextProjectNumber;
+
+  await ctx.db.patch(counter._id, { nextProjectNumber: projectNumber + 1 });
+
+  return projectNumber;
+}

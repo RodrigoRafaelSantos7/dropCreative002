@@ -8,7 +8,7 @@ import type { RootState } from "@/redux/store";
 
 type ProvidersProps = {
   children: ReactNode;
-  profile?: Partial<RootState>;
+  profile?: Partial<RootState> | null;
 };
 
 const Providers = ({ children, profile }: ProvidersProps) => (
