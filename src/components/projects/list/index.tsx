@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useProjectCreation } from "@/hooks/use-project";
 import { canvasPath, signInPath } from "@/paths";
+import type { ProjectSummary } from "@/redux/slices/projects";
 import { useAppSelector } from "@/redux/store";
 import { EmptyProjectList } from "./empty-project-list";
 
@@ -36,7 +37,7 @@ const ProjectsList = () => {
         <EmptyProjectList />
       ) : (
         <div className="grid grid-cols-2 gap-6 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {projects.map((project: any) => (
+          {projects.map((project: ProjectSummary) => (
             <Link
               className="group cursor-pointer"
               href={canvasPath(user.name, project._id)}

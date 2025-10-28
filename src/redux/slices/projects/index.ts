@@ -1,6 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
-type ProjectSummary = {
+export type ProjectSummary = {
   _id: string;
   name: string;
   projectNumber: number;
