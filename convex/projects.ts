@@ -53,8 +53,8 @@ export const getProject = query({
       throw new ConvexError({
         code: 403,
         message:
-          "Unauthorized. You are not the owner of this project and it is not public.",
-        severity: "high",
+          "Access denied. You are not the owner of this project and it is not public.",
+        severity: "medium",
       });
     }
 

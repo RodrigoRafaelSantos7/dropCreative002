@@ -3,8 +3,15 @@ import { Toaster } from "sonner";
 import { AutumnWrapper } from "@/components/autumn/autumn-wrapper";
 import { ConvexClientProvider } from "@/components/convex/convex-client-provider";
 import { ThemeProvider } from "@/components/theme/theme-provider";
+import ReduxProvider from "@/redux/provider";
+import type { RootState } from "@/redux/store";
 
-const Providers = ({ children }: { children: ReactNode }) => (
+type ProvidersProps = {
+  children: ReactNode;
+  profile?: Partial<RootState>;
+};
+
+const Providers = ({ children, profile }: ProvidersProps) => (
   <ThemeProvider
     attribute="class"
     defaultTheme="system"
@@ -14,8 +21,10 @@ const Providers = ({ children }: { children: ReactNode }) => (
   >
     <ConvexClientProvider>
       <AutumnWrapper>
-        {children}
-        <Toaster richColors />
+        <ReduxProvider preloadedState={{ profile }}>
+          {children}
+          <Toaster richColors />
+        </ReduxProvider>
       </AutumnWrapper>
     </ConvexClientProvider>
   </ThemeProvider>

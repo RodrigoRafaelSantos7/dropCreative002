@@ -1,13 +1,17 @@
 import { redirect } from "next/navigation";
 import { SubscriptionEntitlementQuery } from "@/components/convex/query.config";
+import Navbar from "@/components/navbar";
 import { combinedSlug } from "@/lib/utils";
-import { billingPath, dashboardPath } from "@/paths";
+import { billingPath } from "@/paths";
 
-const Page = async () => {
-  const { entitlement, profileName } =
+type LayoutProps = {
+  children: React.ReactNode;
+};
+
+const Layout = async ({ children }: LayoutProps) => {
+  const { profileName, entitlement } =
     await SubscriptionEntitlementQuery("premium_dashboard");
 
-  // TODO: Add a better error handling here/see what we can do with the error
   if (!profileName) {
     throw new Error("Profile name not found");
   }
@@ -15,8 +19,12 @@ const Page = async () => {
   if (!entitlement) {
     redirect(billingPath(combinedSlug(profileName)));
   }
-
-  redirect(dashboardPath(combinedSlug(profileName)));
+  return (
+    <main className="grid grid-cols-1">
+      <Navbar />
+      {children}
+    </main>
+  );
 };
 
-export default Page;
+export default Layout;

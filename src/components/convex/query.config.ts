@@ -89,4 +89,4 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
   }
 };
 
-export { SubscriptionEntitlementQuery };
+export { ProfileQuery, SubscriptionEntitlementQuery };

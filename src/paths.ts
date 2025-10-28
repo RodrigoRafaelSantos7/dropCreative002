@@ -5,9 +5,12 @@ export const signInPath = () => "/auth/sign-in";
 export const signUpPath = () => "/auth/sign-up";
 
 // Protected
-export const dashboardPath = () => "/dashboard";
+export const dashboardPath = (route?: string) => `/dashboard/${route}`;
 
-export const userDashboardPath = (profileName: string) =>
-  `/dashboard/${profileName}`;
+export const canvasPath = (userSlug: string, projectSlug: string) =>
+  `/dashboard/${userSlug}/canvas?project=${projectSlug}`;
+
+export const styleGuidePath = (userSlug: string, projectSlug: string) =>
+  `/dashboard/${userSlug}/style-guide?project=${projectSlug}`;
 
 export const billingPath = (profileName: string) => `/billing/${profileName}`;
