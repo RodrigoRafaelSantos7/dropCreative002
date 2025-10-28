@@ -9,6 +9,7 @@ const schema = defineSchema({
     sketchData: v.any(), // JSON Structure from Redux Shapes State
     thumbnail: v.optional(v.string()),
     isPublic: v.boolean(),
+    styleGuide: v.optional(v.string()),
 
     projectNumber: v.number(), // Auto-incrementing project number per user
 

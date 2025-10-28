@@ -1,6 +1,7 @@
 import { fetchAction, preloadQuery } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { getToken } from "@/lib/auth-server";
 import { logger } from "@/lib/logger";
 import { type ConvexRawUser, normalizeProfile } from "@/types/user";
@@ -134,4 +135,44 @@ const ProjectsQuery = async () => {
   }
 };
 
-export { ProfileQuery, SubscriptionEntitlementQuery, ProjectsQuery };
+const StyleGuideQuery = async (projectId: string) => {
+  try {
+    log.info("Starting StyleGuideQuery");
+
+    log.info("Fetching token");
+    const token = await getToken();
+    log.info("Token fetched successfully");
+
+    log.info("Fetching project");
+    const styleGuide = await preloadQuery(
+      api.projects.getProjectStyleGuide,
+      {
+        projectId: projectId as Id<"projects">,
+      },
+      { token }
+    );
+
+    log.info(`StyleGuide fetched successfully for project ${projectId}`);
+    return { styleGuide };
+  } catch (error) {
+    log.error(error);
+
+    const errorMessage =
+      error instanceof ConvexError
+        ? (error.data as { message: string }).message
+        : "Unexpected error occurred";
+
+    throw new ConvexError({
+      code: 500,
+      message: errorMessage,
+      severity: "high",
+    });
+  }
+};
+
+export {
+  ProfileQuery,
+  SubscriptionEntitlementQuery,
+  ProjectsQuery,
+  StyleGuideQuery,
+};

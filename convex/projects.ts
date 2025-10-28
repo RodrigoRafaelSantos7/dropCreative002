@@ -217,3 +217,38 @@ export const getUserProjects = query({
     }));
   },
 });
+
+export const getProjectStyleGuide = query({
+  args: {
+    projectId: v.id("projects"),
+  },
+  handler: async (ctx, { projectId }) => {
+    /**
+     * Authenticate the requesting user.
+     * Throws a 404 ConvexError if no user is authenticated.
+     */
+    const user = await ctx.runQuery(api.auth.getCurrentUser, {});
+
+    const project = await ctx.db.get(projectId);
+
+    if (!project) {
+      throw new ConvexError({
+        code: 404,
+        message: "Project not found for this project ID",
+        severity: "high",
+      });
+    }
+
+    // Check ownership or public access
+    if (project.userId !== user._id && !project.isPublic) {
+      throw new ConvexError({
+        code: 403,
+        message:
+          "Access denied. You are not the owner of this project and the project is not public.",
+        severity: "medium",
+      });
+    }
+
+    return project.styleGuide ? JSON.parse(project.styleGuide) : null;
+  },
+});
