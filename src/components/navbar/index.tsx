@@ -37,12 +37,12 @@ const Navbar = () => {
   const tabs: TabProps[] = [
     {
       label: "Canvas",
-      href: canvasPath(project?.userId ?? "", project?._id ?? ""),
+      href: canvasPath(me.name, project?._id ?? ""),
       icon: <HashIcon className="size-4" />,
     },
     {
       label: "Style Guide",
-      href: styleGuidePath(project?.userId ?? "", project?._id ?? ""),
+      href: styleGuidePath(me.name, project?._id ?? ""),
       icon: <LayoutTemplateIcon className="size-4" />,
     },
   ];
