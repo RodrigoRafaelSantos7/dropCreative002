@@ -86,4 +86,52 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
   }
 };
 
-export { ProfileQuery, SubscriptionEntitlementQuery };
+const ProjectsQuery = async () => {
+  try {
+    log.info("Starting ProjectsQuery");
+    log.info("Fetching profile");
+    const rawProfile = await ProfileQuery();
+    log.info("Profile fetched successfully");
+
+    log.info("Normalizing profile");
+    const profile = normalizeProfile(
+      rawProfile?._valueJSON as unknown as ConvexRawUser | null
+    );
+    log.info("Profile normalized successfully");
+
+    if (!profile) {
+      log.error("Profile not found");
+      return { projects: null, profile: null };
+    }
+
+    log.info("Fetching token");
+    const token = await getToken();
+    log.info("Token fetched successfully");
+
+    log.info("Fetching User Projects from Convex");
+    const projects = await preloadQuery(
+      api.projects.getUserProjects,
+      {
+        userId: profile.id,
+      },
+      { token }
+    );
+    log.info("User Projects fetched successfully");
+    return { projects, profile };
+  } catch (error) {
+    log.error(error);
+
+    const errorMessage =
+      error instanceof ConvexError
+        ? (error.data as { message: string }).message
+        : "Unexpected error occurred";
+
+    throw new ConvexError({
+      code: 500,
+      message: errorMessage,
+      severity: "high",
+    });
+  }
+};
+
+export { ProfileQuery, SubscriptionEntitlementQuery, ProjectsQuery };
