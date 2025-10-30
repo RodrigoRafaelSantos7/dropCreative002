@@ -20,7 +20,7 @@ const EmptyComponent = ({ icon, title, description }: EmptyComponentProps) => {
     <div className="py-20">
       <Empty>
         <EmptyHeader>
-          <EmptyMedia variant="icon">
+          <EmptyMedia className="size-14" variant="icon">
             <Icon className="size-10 text-muted-foreground" />
           </EmptyMedia>
           <EmptyTitle>{title}</EmptyTitle>
