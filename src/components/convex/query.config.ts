@@ -28,22 +28,16 @@ const log = logger.child({ module: "ConvexQuery" });
  */
 const ProfileQuery = async () => {
   try {
-    log.info("Fetching token");
     const token = await getToken();
-    log.info("Token fetched successfully");
-
     const profile = await preloadQuery(api.auth.getCurrentUser, {}, { token });
-    log.info("Profile fetched successfully");
     return profile;
   } catch (error) {
-    log.error(error);
+    let errorMessage = "Unexpected error occurred";
+    if (error instanceof ConvexError || error instanceof Error) {
+      errorMessage = error.message;
+    }
 
-    const errorMessage =
-      error instanceof ConvexError
-        ? (error.data as { message: string }).message
-        : "Unexpected error occurred";
-
-    log.error(errorMessage);
+    log.error({ error, errorMessage }, "Failed to fetch user profile");
     return null;
   }
 };
@@ -74,21 +68,21 @@ const ProfileQuery = async () => {
  */
 const SubscriptionEntitlementQuery = async (featureId: string) => {
   try {
-    log.info("Fetching token");
     const token = await getToken();
-    log.info("Token fetched successfully");
-
-    log.info("Fetching profile");
     const rawProfile = await ProfileQuery();
-    log.info("Profile fetched successfully");
 
-    log.info("Normalizing profile");
+    if (!rawProfile) {
+      throw new ConvexError({
+        code: 404,
+        message: "User profile not found. Please sign in to continue.",
+        severity: "high",
+      });
+    }
+
     const profile = normalizeProfile(
       rawProfile?._valueJSON as unknown as ConvexRawUser | null
     );
-    log.info("Profile normalized successfully");
 
-    log.info("Fetching entitlement");
     const entitlement = await fetchAction(
       api.subscription.hasEntitlement,
       {
@@ -98,16 +92,18 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
         token,
       }
     );
-    log.info("Entitlement fetched successfully");
 
     return { entitlement, profileName: profile?.name };
   } catch (error) {
-    log.error(error);
+    if (error instanceof ConvexError) {
+      log.error({ error, featureId }, "Entitlement check failed");
+      throw error;
+    }
 
     const errorMessage =
-      error instanceof ConvexError
-        ? (error.data as { message: string }).message
-        : "Unexpected error occurred";
+      error instanceof Error ? error.message : "Unexpected error occurred";
+
+    log.error({ error, featureId, errorMessage }, "Entitlement check failed");
 
     throw new ConvexError({
       code: 500,
@@ -138,27 +134,17 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
  */
 const ProjectsQuery = async () => {
   try {
-    log.info("Starting ProjectsQuery");
-    log.info("Fetching profile");
     const rawProfile = await ProfileQuery();
-    log.info("Profile fetched successfully");
-
-    log.info("Normalizing profile");
     const profile = normalizeProfile(
       rawProfile?._valueJSON as unknown as ConvexRawUser | null
     );
-    log.info("Profile normalized successfully");
 
     if (!profile) {
-      log.error("Profile not found");
+      log.warn("User profile not found, returning null projects");
       return { projects: null, profile: null };
     }
 
-    log.info("Fetching token");
     const token = await getToken();
-    log.info("Token fetched successfully");
-
-    log.info("Fetching User Projects from Convex");
     const projects = await preloadQuery(
       api.projects.getUserProjects,
       {
@@ -166,15 +152,18 @@ const ProjectsQuery = async () => {
       },
       { token }
     );
-    log.info("User Projects fetched successfully");
+
     return { projects, profile };
   } catch (error) {
-    log.error(error);
+    if (error instanceof ConvexError) {
+      log.error({ error }, "Failed to fetch user projects");
+      throw error;
+    }
 
     const errorMessage =
-      error instanceof ConvexError
-        ? (error.data as { message: string }).message
-        : "Unexpected error occurred";
+      error instanceof Error ? error.message : "Unexpected error occurred";
+
+    log.error({ error, errorMessage }, "Failed to fetch user projects");
 
     throw new ConvexError({
       code: 500,
@@ -206,13 +195,7 @@ const ProjectsQuery = async () => {
  */
 const StyleGuideQuery = async (projectId: string) => {
   try {
-    log.info("Starting StyleGuideQuery");
-
-    log.info("Fetching token");
     const token = await getToken();
-    log.info("Token fetched successfully");
-
-    log.info("Fetching project");
     const styleGuide = await preloadQuery(
       api.projects.getProjectStyleGuide,
       {
@@ -221,15 +204,20 @@ const StyleGuideQuery = async (projectId: string) => {
       { token }
     );
 
-    log.info(`StyleGuide fetched successfully for project ${projectId}`);
     return { styleGuide };
   } catch (error) {
-    log.error(error);
+    if (error instanceof ConvexError) {
+      log.error({ error, projectId }, "Failed to fetch style guide");
+      throw error;
+    }
 
     const errorMessage =
-      error instanceof ConvexError
-        ? (error.data as { message: string }).message
-        : "Unexpected error occurred";
+      error instanceof Error ? error.message : "Unexpected error occurred";
+
+    log.error(
+      { error, projectId, errorMessage },
+      "Failed to fetch style guide"
+    );
 
     throw new ConvexError({
       code: 500,
