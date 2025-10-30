@@ -1,29 +1,27 @@
 import { ConvexError, v } from "convex/values";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
 
+const DEFAULT_PROJECT_LIMIT = 20;
+const MAX_PROJECT_LIMIT = 100;
+const MIN_PROJECT_LIMIT = 1;
+
 /**
- * Get a project by ID.
+ * Retrieves a project by ID with authorization checks.
  *
- * @param projectId - The ID of the project to get.
- * @returns The project.
- * @throws {ConvexError} If the project is not found or the user is not authorized to access it.
+ * @param projectId - The ID of the project to retrieve
+ * @returns The project document
+ * @throws {ConvexError} 404 if project not found, 403 if user lacks access
  */
 export const getProject = query({
   args: {
     projectId: v.id("projects"),
   },
+  returns: v.any(),
   handler: async (ctx, { projectId }) => {
-    /**
-     * Authenticate the requesting user.
-     * Throws a 404 ConvexError if no user is authenticated.
-     */
     const user = await ctx.runQuery(api.auth.getCurrentUser, {});
 
-    /**
-     * Fetch the project by ID.
-     * Returns null if the project doesn't exist.
-     */
     const project = await ctx.db.get(projectId);
 
     if (!project) {
@@ -34,11 +32,7 @@ export const getProject = query({
       });
     }
 
-    /**
-     * Authorization check: Allow access if the user is the project owner
-     * OR if the project is marked as public.
-     * This prevents unauthorized users from accessing private projects.
-     */
+    // Authorization: owner or public access only
     if (project.userId !== user._id && !project.isPublic) {
       throw new ConvexError({
         code: 403,
@@ -53,180 +47,211 @@ export const getProject = query({
 });
 
 /**
- * Creates a new project for a user with optional metadata.
+ * Creates a new project with auto-incrementing project numbers per user.
  *
- * Implements an auto-incrementing project numbering system per user, ensuring
- * each user has sequentially numbered projects (Project 1, Project 2, etc.).
+ * Projects are numbered sequentially per user (Project 1, Project 2, etc.).
+ * Defaults to "Project {number}" if no name provided. All projects are private by default.
  *
- * If no name is provided, generates a default name using the project number.
- * All projects are created as private by default (isPublic: false).
- *
- * @param userId - The authenticated user creating the project
- * @param name - Optional custom project name. Defaults to "Project {number}"
- * @param sketchData - The complete Redux shapes state as JSON (required)
- * @param thumbnail - Optional base64-encoded thumbnail image
- * @returns Project metadata including ID, name, number, and timestamps
- *
- * @example
- * await createProject({
- *   userId: "user123",
- *   name: "My Sketch",
- *   sketchData: { shapes: [...] },
- *   thumbnail: "data:image/png;base64,..."
- * });
+ * @param userId - Must match the authenticated user's ID
+ * @param name - Optional project name
+ * @param sketchData - Required Redux shapes state JSON
+ * @param thumbnail - Optional base64-encoded thumbnail
+ * @returns Project metadata with ID, name, number, and timestamps
  */
 export const createProject = mutation({
   args: {
     userId: v.string(),
     name: v.optional(v.string()),
-    sketchData: v.any(), // JSON Structure from Redux Shapes State
+    sketchData: v.any(),
     thumbnail: v.optional(v.string()),
   },
+  returns: v.object({
+    projectId: v.id("projects"),
+    name: v.string(),
+    projectNumber: v.number(),
+    lastModified: v.number(),
+    createdAt: v.number(),
+  }),
   handler: async (ctx, { userId, name, sketchData, thumbnail }) => {
-    console.log("🚀 [Convex] Creating project for user:", { userId });
+    // Security: prevent creating projects for other users
+    const authenticatedUser: { _id: string } = await ctx.runQuery(
+      api.auth.getCurrentUser,
+      {}
+    );
+    if (authenticatedUser._id !== userId) {
+      throw new ConvexError({
+        code: 403,
+        message: "Cannot create project for another user",
+        severity: "high",
+      });
+    }
 
-    // Get the next sequential project number for this user
-    // This ensures each user has their own independent project numbering
+    if (!sketchData) {
+      throw new ConvexError({
+        code: 400,
+        message: "sketchData is required",
+        severity: "medium",
+      });
+    }
+
     const projectNumber = await getNextProjectNumber(ctx, userId);
-
-    // Use provided name or generate default "Project {number}"
     const projectName = name || `Project ${projectNumber}`;
+    const timestamp = Date.now();
 
-    // Track creation and modification timestamps (initially the same)
-    const lastModified = Date.now();
-    const createdAt = Date.now();
-
-    // Persist project to database with all metadata
-    const projectId = await ctx.db.insert("projects", {
+    const projectId: Id<"projects"> = await ctx.db.insert("projects", {
       userId,
       name: projectName,
       sketchData,
       thumbnail,
       projectNumber,
-      lastModified,
-      createdAt,
-      isPublic: false, // New projects are private by default
+      lastModified: timestamp,
+      createdAt: timestamp,
+      isPublic: false,
     });
 
-    console.log("✅ [Convex] Project created:", {
-      projectId,
-      name: projectName,
-      projectNumber,
-    });
-
-    // Return essential metadata for client-side state management
     return {
       projectId,
       name: projectName,
       projectNumber,
-      lastModified,
-      createdAt,
+      lastModified: timestamp,
+      createdAt: timestamp,
     };
   },
 });
 
 /**
- * Manages per-user project numbering with atomic counter updates.
+ * Generates sequential project numbers per user with atomic counter updates.
  *
- * This function implements a sequence generation pattern to ensure each user
- * gets unique, sequential project numbers. The counter is stored in a separate
- * "projects_counters" table and is incremented atomically to prevent race conditions.
+ * Uses a separate counter table for O(1) performance and atomicity.
+ * Counter state persists across project deletions, ensuring numbers are never reused.
  *
- * Strategy:
- * - First project for a user: returns 1, creates counter starting at 2
- * - Subsequent projects: returns current counter value, increments to next number
- *
- * Why a separate counter table instead of counting existing projects?
- * - Performance: O(1) lookup vs O(n) query across all projects
- * - Atomicity: Prevents duplicate numbers in concurrent scenarios
- * - Consistency: Survives project deletions (numbers never decrease or get reused)
- *
- * @param ctx - The mutation context for database access
- * @param userId - The user to get the next project number for
- * @returns The next available project number for this user
- *
- * @example
- * // First call for user123: returns 1, creates counter[nextNumber: 2]
- * const num1 = await getNextProjectNumber(ctx, "user123"); // 1
- *
- * // Second call: returns 2, updates counter[nextNumber: 3]
- * const num2 = await getNextProjectNumber(ctx, "user123"); // 2
+ * @param ctx - Mutation context
+ * @param userId - User ID
+ * @returns Next available project number for the user
+ * @throws {ConvexError} If userId is invalid or counter state is corrupted
  */
 async function getNextProjectNumber(
   ctx: MutationCtx,
   userId: string
 ): Promise<number> {
-  // Lookup existing counter for this user using indexed query
+  if (!userId || typeof userId !== "string" || userId.trim() === "") {
+    throw new ConvexError({
+      code: 400,
+      message: "Invalid userId provided",
+      severity: "high",
+    });
+  }
+
   const counter = await ctx.db
     .query("projects_counters")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .first();
 
   if (!counter) {
-    // First project ever for this user
-    // Return 1 and initialize counter to 2 for next project
     await ctx.db.insert("projects_counters", { userId, nextProjectNumber: 2 });
     return 1;
   }
 
-  // Extract the next project number to assign
   const projectNumber = counter.nextProjectNumber;
 
-  // Atomically increment counter for next project creation
-  // This happens in a transaction with the project insertion
+  // Data integrity check
+  if (typeof projectNumber !== "number" || projectNumber < 1) {
+    throw new ConvexError({
+      code: 500,
+      message: "Invalid counter state detected",
+      severity: "high",
+    });
+  }
+
   await ctx.db.patch(counter._id, { nextProjectNumber: projectNumber + 1 });
 
   return projectNumber;
 }
 
+/**
+ * Retrieves projects for the authenticated user, ordered by last modified (descending).
+ *
+ * @param userId - Must match the authenticated user's ID
+ * @param limit - Maximum number of projects (default: 20, max: 100)
+ * @returns Array of project summaries
+ * @throws {ConvexError} 403 if accessing another user's projects
+ */
 export const getUserProjects = query({
   args: {
     userId: v.string(),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, { userId, limit = 20 }) => {
-    console.log("🚀 [Convex] Getting user projects for user:", { userId });
-    console.log("📚 [Convex] Limiting to:", { limit });
+  returns: v.array(
+    v.object({
+      _id: v.id("projects"),
+      name: v.string(),
+      projectNumber: v.number(),
+      thumbnail: v.optional(v.string()),
+      lastModified: v.number(),
+      createdAt: v.number(),
+      isPublic: v.boolean(),
+    })
+  ),
+  handler: async (ctx, { userId, limit = DEFAULT_PROJECT_LIMIT }) => {
+    // Security: prevent querying other users' projects
+    const authenticatedUser: { _id: string } = await ctx.runQuery(
+      api.auth.getCurrentUser,
+      {}
+    );
+    if (authenticatedUser._id !== userId) {
+      throw new ConvexError({
+        code: 403,
+        message: "Cannot access another user's projects",
+        severity: "high",
+      });
+    }
 
-    console.log("🔍 [Convex] Querying projects...");
-    const allProjects = await ctx.db
+    const validatedLimit = Math.min(
+      Math.max(MIN_PROJECT_LIMIT, limit || DEFAULT_PROJECT_LIMIT),
+      MAX_PROJECT_LIMIT
+    );
+
+    const projects = await ctx.db
       .query("projects")
       .withIndex("by_userId_lastModified", (q) => q.eq("userId", userId))
       .order("desc")
-      .collect();
+      .take(validatedLimit);
 
-    console.log("✅ [Convex] Projects fetched:", {
-      allProjects: allProjects.length,
-    });
-
-    const projects = allProjects.slice(0, limit);
-
-    console.log("📝 [Convex] Projects to return:", {
-      projects: projects.length,
-    });
-    console.log("🔍 [Convex] Returning Projects:", { projects });
-
-    return projects.map((project) => ({
-      _id: project._id,
-      name: project.name,
-      projectNumber: project.projectNumber,
-      thumbnail: project.thumbnail,
-      lastModified: project.lastModified,
-      createdAt: project.createdAt,
-      isPublic: project.isPublic,
-    }));
+    return projects.map(
+      (project: {
+        _id: Id<"projects">;
+        name: string;
+        projectNumber: number;
+        thumbnail?: string;
+        lastModified: number;
+        createdAt: number;
+        isPublic: boolean;
+      }) => ({
+        _id: project._id,
+        name: project.name,
+        projectNumber: project.projectNumber,
+        thumbnail: project.thumbnail,
+        lastModified: project.lastModified,
+        createdAt: project.createdAt,
+        isPublic: project.isPublic,
+      })
+    );
   },
 });
 
+/**
+ * Retrieves the style guide for a project as parsed JSON.
+ *
+ * @param projectId - The project ID
+ * @returns Parsed style guide object or null if not set
+ * @throws {ConvexError} 404 if project not found, 403 if unauthorized, 500 if JSON invalid
+ */
 export const getProjectStyleGuide = query({
   args: {
     projectId: v.id("projects"),
   },
+  returns: v.union(v.any(), v.null()),
   handler: async (ctx, { projectId }) => {
-    /**
-     * Authenticate the requesting user.
-     * Throws a 404 ConvexError if no user is authenticated.
-     */
     const user = await ctx.runQuery(api.auth.getCurrentUser, {});
 
     const project = await ctx.db.get(projectId);
@@ -234,12 +259,12 @@ export const getProjectStyleGuide = query({
     if (!project) {
       throw new ConvexError({
         code: 404,
-        message: "Project not found for this project ID",
+        message: "Project not found",
         severity: "high",
       });
     }
 
-    // Check ownership or public access
+    // Authorization: owner or public access only
     if (project.userId !== user._id && !project.isPublic) {
       throw new ConvexError({
         code: 403,
@@ -249,6 +274,18 @@ export const getProjectStyleGuide = query({
       });
     }
 
-    return project.styleGuide ? JSON.parse(project.styleGuide) : null;
+    if (!project.styleGuide) {
+      return null;
+    }
+
+    try {
+      return JSON.parse(project.styleGuide);
+    } catch {
+      throw new ConvexError({
+        code: 500,
+        message: "Invalid style guide format",
+        severity: "high",
+      });
+    }
   },
 });
