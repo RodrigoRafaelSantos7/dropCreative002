@@ -21,7 +21,7 @@ const EmptyComponent = ({ icon, title, description }: EmptyComponentProps) => {
       <Empty>
         <EmptyHeader>
           <EmptyMedia variant="icon">
-            <Icon className="size-8 text-muted-foreground" />
+            <Icon className="size-10 text-muted-foreground" />
           </EmptyMedia>
           <EmptyTitle>{title}</EmptyTitle>
           <EmptyDescription>{description}</EmptyDescription>
