@@ -1,3 +1,5 @@
+"use server";
+
 import { fetchAction, preloadQuery } from "convex/nextjs";
 import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
@@ -28,8 +30,11 @@ const log = logger.child({ module: "ConvexQuery" });
  */
 const ProfileQuery = async () => {
   try {
-    const token = await getToken();
-    const profile = await preloadQuery(api.auth.getCurrentUser, {}, { token });
+    const profile = await preloadQuery(
+      api.auth.getCurrentUser,
+      {},
+      { token: await getToken() }
+    );
     return profile;
   } catch (error) {
     let errorMessage = "Unexpected error occurred";
@@ -68,7 +73,6 @@ const ProfileQuery = async () => {
  */
 const SubscriptionEntitlementQuery = async (featureId: string) => {
   try {
-    const token = await getToken();
     const rawProfile = await ProfileQuery();
 
     if (!rawProfile) {
@@ -89,7 +93,7 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
         featureId,
       },
       {
-        token,
+        token: await getToken(),
       }
     );
 
@@ -144,13 +148,12 @@ const ProjectsQuery = async () => {
       return { projects: null, profile: null };
     }
 
-    const token = await getToken();
     const projects = await preloadQuery(
       api.projects.getUserProjects,
       {
         userId: profile.id,
       },
-      { token }
+      { token: await getToken() }
     );
 
     return { projects, profile };
@@ -195,13 +198,12 @@ const ProjectsQuery = async () => {
  */
 const StyleGuideQuery = async (projectId: string) => {
   try {
-    const token = await getToken();
     const styleGuide = await preloadQuery(
       api.projects.getProjectStyleGuide,
       {
         projectId: projectId as Id<"projects">,
       },
-      { token }
+      { token: await getToken() }
     );
 
     return { styleGuide };
@@ -227,9 +229,42 @@ const StyleGuideQuery = async (projectId: string) => {
   }
 };
 
+const MoodBoardImagesQuery = async (projectId: string) => {
+  try {
+    const images = await preloadQuery(
+      api.moodboard.getMoodBoardImages,
+      {
+        projectId: projectId as Id<"projects">,
+      },
+      { token: await getToken() }
+    );
+
+    return { images };
+  } catch (error) {
+    if (error instanceof ConvexError) {
+      log.error({ error, projectId }, "Failed to fetch mood board images");
+      throw error;
+    }
+
+    const errorMessage =
+      error instanceof Error ? error.message : "Unexpected error occurred";
+
+    log.error(
+      { error, projectId, errorMessage },
+      "Failed to fetch style guide"
+    );
+
+    throw new ConvexError({
+      code: 500,
+      message: errorMessage,
+      severity: "high",
+    });
+  }
+};
 export {
   ProfileQuery,
   SubscriptionEntitlementQuery,
   ProjectsQuery,
   StyleGuideQuery,
+  MoodBoardImagesQuery,
 };
