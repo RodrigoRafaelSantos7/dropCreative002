@@ -1,8 +1,8 @@
 import Link from "next/link";
+import { SignInForm } from "@/components/auth/forms/sign-in-form";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { signUpPath } from "@/paths";
-import { SignInForm } from "./_components/sign-in-form";
 
 const Page = () => (
   <section className="flex min-h-dvh w-full items-center justify-center">
