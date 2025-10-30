@@ -1,4 +1,4 @@
-import { fetchMutation } from "convex/nextjs";
+import { useMutation } from "convex/react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { logger } from "@/lib/logger";
@@ -52,6 +52,7 @@ export const useProjectCreation = () => {
   const user = useAppSelector((state) => state.profile);
   const projectsState = useAppSelector((state) => state.projects);
   const shapesState = useAppSelector((state) => state.shapes);
+  const createProjectMutation = useMutation(api.projects.createProject);
 
   const createProject = async (name?: string) => {
     if (!user?.id) {
@@ -70,7 +71,7 @@ export const useProjectCreation = () => {
       log.info("Thumbnail generated");
 
       log.info("Creating project");
-      const result = await fetchMutation(api.projects.createProject, {
+      const result = await createProjectMutation({
         userId: user.id,
         name: name || undefined,
         sketchData: {

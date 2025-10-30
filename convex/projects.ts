@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
-import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { type MutationCtx, mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
 
 const DEFAULT_PROJECT_LIMIT = 20;
 const MAX_PROJECT_LIMIT = 100;
@@ -20,7 +20,7 @@ export const getProject = query({
   },
   returns: v.any(),
   handler: async (ctx, { projectId }) => {
-    const user = await ctx.runQuery(api.auth.getCurrentUser, {});
+    const user = await authComponent.getAuthUser(ctx);
 
     const project = await ctx.db.get(projectId);
 
@@ -33,7 +33,7 @@ export const getProject = query({
     }
 
     // Authorization: owner or public access only
-    if (project.userId !== user._id && !project.isPublic) {
+    if (!user || (project.userId !== user._id && !project.isPublic)) {
       throw new ConvexError({
         code: 403,
         message:
@@ -74,10 +74,16 @@ export const createProject = mutation({
   }),
   handler: async (ctx, { userId, name, sketchData, thumbnail }) => {
     // Security: prevent creating projects for other users
-    const authenticatedUser: { _id: string } = await ctx.runQuery(
-      api.auth.getCurrentUser,
-      {}
-    );
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to create a project.",
+        severity: "high",
+      });
+    }
+
     if (authenticatedUser._id !== userId) {
       throw new ConvexError({
         code: 403,
@@ -194,10 +200,16 @@ export const getUserProjects = query({
   ),
   handler: async (ctx, { userId, limit = DEFAULT_PROJECT_LIMIT }) => {
     // Security: prevent querying other users' projects
-    const authenticatedUser: { _id: string } = await ctx.runQuery(
-      api.auth.getCurrentUser,
-      {}
-    );
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to view projects.",
+        severity: "high",
+      });
+    }
+
     if (authenticatedUser._id !== userId) {
       throw new ConvexError({
         code: 403,
@@ -252,7 +264,7 @@ export const getProjectStyleGuide = query({
   },
   returns: v.union(v.any(), v.null()),
   handler: async (ctx, { projectId }) => {
-    const user = await ctx.runQuery(api.auth.getCurrentUser, {});
+    const user = await authComponent.getAuthUser(ctx);
 
     const project = await ctx.db.get(projectId);
 
@@ -265,7 +277,7 @@ export const getProjectStyleGuide = query({
     }
 
     // Authorization: owner or public access only
-    if (project.userId !== user._id && !project.isPublic) {
+    if (!user || (project.userId !== user._id && !project.isPublic)) {
       throw new ConvexError({
         code: 403,
         message:
