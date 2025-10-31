@@ -7,7 +7,7 @@ type LoadingProps = {
 
 const Loading = ({ title, message }: LoadingProps) => (
   <div className="flex min-h-dvh items-center justify-center bg-background">
-    <div className="fle-col flex items-center gap-4 text-center">
+    <div className="flex items-center gap-4 text-center">
       <Spinner />
 
       <div className="space-y-1">
