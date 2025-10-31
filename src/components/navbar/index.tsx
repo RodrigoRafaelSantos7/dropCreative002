@@ -55,6 +55,7 @@ const Navbar = () => {
   const pathnameWithProject = projectId
     ? `${pathname}?project=${projectId}`
     : pathname;
+
   return (
     <nav className="fixed top-0 right-0 left-0 z-50 grid grid-cols-2 p-6 lg:grid-cols-3">
       <div className="flex items-center gap-4">
