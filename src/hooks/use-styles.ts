@@ -239,8 +239,10 @@ const useMoodBoard = (guideImages: MoodBoardImage[]) => {
 
     // Add each image file
     for (const file of imageFiles) {
-      if (images.length >= MAX_IMAGES) {
+      if (images.length < MAX_IMAGES) {
         addImage(file);
+      } else {
+        break;
       }
     }
   };
