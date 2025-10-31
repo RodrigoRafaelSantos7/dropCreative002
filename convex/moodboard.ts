@@ -7,7 +7,7 @@ import { authComponent } from "./auth";
  * Prevents DoS attacks and excessive resource usage from projects with
  * thousands of uploaded images.
  */
-const MAX_MOODBOARD_IMAGES = 20;
+const MAX_MOODBOARD_IMAGES = 5;
 
 /**
  * Retrieves moodboard images for a project with authorization checks.
@@ -252,6 +252,88 @@ export const removeMoodboardImage = mutation({
     } catch (error) {
       console.error("Failed to remove moodboard image", error);
     }
+
+    return {
+      success: true,
+      imageCount: updatedImages.length,
+    };
+  },
+});
+
+/**
+ * Adds a moodboard image to a project.
+ *
+ * This mutation:
+ * - Authenticates the user before adding the image
+ * - Adds the image to the project's moodboard images
+ * - Returns the number of remaining images in the project
+ *
+ * @param projectId - The ID of the project containing the moodboard image
+ * @param storageId - The ID of the storage file containing the moodboard image
+ * @returns The number of remaining images in the project
+ * @throws {ConvexError} 401 if the user is not authenticated, 403 if the user is not the owner of the project, 404 if the project is not found, 400 if the maximum number of moodboard images is reached
+ *
+ * @example
+ * ```typescript
+ * const result = await ctx.runMutation(api.moodboard.addMoodboardImage, {
+ *   projectId: "k1234...",
+ *   storageId: "s1234..."
+ * });
+ * // Returns: { success: true, imageCount: 1 }
+ * ```
+ */
+export const addMoodboardImage = mutation({
+  args: {
+    projectId: v.id("projects"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { projectId, storageId }) => {
+    // Authenticate user before proceeding with any database operations
+    // This ensures unauthorized users cannot probe for project existence
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to add a moodboard image.",
+        severity: "high",
+      });
+    }
+
+    const project = await ctx.db.get(projectId);
+
+    if (!project) {
+      throw new ConvexError({
+        code: 404,
+        message: "Project not found",
+        severity: "high",
+      });
+    }
+
+    if (project.userId !== authenticatedUser._id) {
+      throw new ConvexError({
+        code: 403,
+        message: "Access denied. You are not the owner of this project.",
+        severity: "high",
+      });
+    }
+
+    const currentImages = project.moodboardImages || [];
+
+    if (currentImages.length >= MAX_MOODBOARD_IMAGES) {
+      throw new ConvexError({
+        code: 400,
+        message: `Maximum number of moodboard images reached. Maximum ${MAX_MOODBOARD_IMAGES} images allowed.`,
+        severity: "medium",
+      });
+    }
+
+    const updatedImages = [...currentImages, storageId];
+
+    await ctx.db.patch(projectId, {
+      moodboardImages: updatedImages,
+      lastModified: Date.now(),
+    });
 
     return {
       success: true,
