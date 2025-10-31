@@ -1,4 +1,5 @@
 import { useMutation } from "convex/react";
+import { useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/convex/_generated/api";
 import { logger } from "@/lib/logger";
@@ -54,66 +55,77 @@ export const useProjectCreation = () => {
   const shapesState = useAppSelector((state) => state.shapes);
   const createProjectMutation = useMutation(api.projects.createProject);
 
-  const createProject = async (name?: string) => {
-    if (!user?.id) {
-      log.error("User not authenticated");
-      toast.error("Please Sign In to create a project");
-      return;
-    }
+  const createProject = useCallback(
+    async (name?: string) => {
+      if (!user?.id) {
+        log.error("User not authenticated");
+        toast.error("Please Sign In to create a project");
+        return;
+      }
 
-    log.info(`Creating project${name ? `: ${name}` : ""}`);
+      log.info(`Creating project${name ? `: ${name}` : ""}`);
 
-    dispatch(createProjectStart());
+      dispatch(createProjectStart());
 
-    try {
-      log.info("Generating thumbnail");
-      const thumbnail = generateGradientThumbnail();
-      log.info("Thumbnail generated");
+      try {
+        log.info("Generating thumbnail");
+        const thumbnail = generateGradientThumbnail();
+        log.info("Thumbnail generated");
 
-      log.info("Creating project");
-      const result = await createProjectMutation({
-        userId: user.id,
-        name: name || undefined,
-        sketchData: {
-          shapes: shapesState.shapes,
-          tool: shapesState.tool,
-          selected: shapesState.selected,
-          frameCounter: shapesState.frameCounter,
-        },
-        thumbnail,
-      });
-
-      log.info(`Project created on Convex: ${result}`);
-
-      log.info("Adding project to Redux state");
-      dispatch(
-        addProject({
-          _id: result.projectId,
-          name: result.name,
-          projectNumber: result.projectNumber,
+        log.info("Creating project");
+        const result = await createProjectMutation({
+          userId: user.id,
+          name: name || undefined,
+          sketchData: {
+            shapes: shapesState.shapes,
+            tool: shapesState.tool,
+            selected: shapesState.selected,
+            frameCounter: shapesState.frameCounter,
+          },
           thumbnail,
-          lastModified: result.lastModified,
-          createdAt: result.createdAt,
-          isPublic: false,
-        })
-      );
-      log.info("Project added to Redux state");
+        });
 
-      log.info("Dispatching creation success");
-      dispatch(createProjectSuccess());
-      log.info("Creation success dispatched");
+        log.info(`Project created on Convex: ${result}`);
 
-      toast.success("Project created successfully");
-    } catch (error) {
-      log.error(`Failed to create project: ${error}`);
+        log.info("Adding project to Redux state");
+        dispatch(
+          addProject({
+            _id: result.projectId,
+            name: result.name,
+            projectNumber: result.projectNumber,
+            thumbnail,
+            lastModified: result.lastModified,
+            createdAt: result.createdAt,
+            isPublic: false,
+          })
+        );
+        log.info("Project added to Redux state");
 
-      log.info("Dispatching creation failure");
-      dispatch(createProjectFailure("Failed to create project"));
-      log.info("Creation failure dispatched");
+        log.info("Dispatching creation success");
+        dispatch(createProjectSuccess());
+        log.info("Creation success dispatched");
 
-      toast.error("Failed to create project");
-    }
-  };
+        toast.success("Project created successfully");
+      } catch (error) {
+        log.error(`Failed to create project: ${error}`);
+
+        log.info("Dispatching creation failure");
+        dispatch(createProjectFailure("Failed to create project"));
+        log.info("Creation failure dispatched");
+
+        toast.error("Failed to create project");
+      }
+    },
+    [
+      user?.id,
+      dispatch,
+      createProjectMutation,
+      shapesState.shapes,
+      shapesState.tool,
+      shapesState.selected,
+      shapesState.frameCounter,
+    ]
+  );
 
   return {
     createProject,
