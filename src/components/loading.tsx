@@ -11,8 +11,10 @@ const Loading = ({ title, message }: LoadingProps) => (
       <Spinner />
 
       <div className="space-y-1">
-        <p className="font-medium text-foreground text-sm">{title}</p>
-        <p className="text-muted-foreground text-xs">{message}</p>
+        {title && (
+          <p className="font-medium text-foreground text-sm">{title}</p>
+        )}
+        {message && <p className="text-muted-foreground text-xs">{message}</p>}
       </div>
     </div>
   </div>
