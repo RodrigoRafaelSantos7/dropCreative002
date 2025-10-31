@@ -32,7 +32,9 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const rawProfile = await ProfileQuery();
+
   let profile: Profile | null = null;
+
   if (rawProfile?._valueJSON) {
     try {
       const parsedJson = JSON.parse(rawProfile._valueJSON);
