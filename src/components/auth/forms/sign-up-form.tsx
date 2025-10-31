@@ -58,7 +58,7 @@ const SignUpForm = () => {
                   <FieldLabel htmlFor={field.name}>Name</FieldLabel>
                   <Input
                     aria-invalid={isInvalid}
-                    autoComplete="email"
+                    autoComplete="name"
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
