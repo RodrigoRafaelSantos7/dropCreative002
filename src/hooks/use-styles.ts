@@ -1,9 +1,8 @@
-import { useForm } from "@tanstack/react-form";
 import { useMutation } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import { z } from "zod";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { logger } from "@/lib/logger";
@@ -11,28 +10,28 @@ import { tryCatch } from "./try-catch";
 
 const log = logger.child({ module: "useStyles" });
 
+const MAX_IMAGES = 5;
+
 type MoodBoardImage = {
   id: string;
   file?: File; // Optional for server-loaded images
   preview: string; // Local preview URL or Convex Url
-  storageId: string;
+  storageId?: string;
   uploaded: boolean;
   uploading: boolean;
   error?: string;
   url?: string; // Convex URL for Uploaded Images
-  isFromServer: boolean; // Track if image came from server
+  isFromServer?: boolean; // Track if image came from server
 };
 
-const stylesFormSchema = z.object({
-  images: z.array(z.custom<MoodBoardImage>()),
-});
+type StylesFormData = {
+  images: MoodBoardImage[];
+};
 
-const MAX_MOODBOARD_IMAGES = 5;
-
-const convertServerImages = (guideImages: MoodBoardImage[]): MoodBoardImage[] =>
+const mapToServerImages = (guideImages: MoodBoardImage[]): MoodBoardImage[] =>
   guideImages.map((image) => ({
     id: image.id,
-    preview: image.url ?? "",
+    preview: image.url || "",
     storageId: image.storageId,
     uploaded: true,
     uploading: false,
@@ -50,9 +49,11 @@ const mergeImages = (
       (clientImage) => clientImage.storageId === serverImage.storageId
     );
 
-    if (clientIndex !== -1) {
-      // Clean up the old blob URL if it exists
-      if (mergedImages[clientIndex].preview.startsWith("blob:")) {
+    if (clientIndex === -1) {
+      mergedImages.push(serverImage);
+    } else {
+      // Clean up old blob URL if it exists
+      if (mergedImages[clientIndex]?.preview?.startsWith("blob:")) {
         URL.revokeObjectURL(mergedImages[clientIndex].preview);
       }
 
@@ -65,19 +66,18 @@ const mergeImages = (
 
 const useMoodBoard = (guideImages: MoodBoardImage[]) => {
   const [dragActive, setDragActive] = useState(false);
-  const searchParams = useSearchParams();
-  const projectId = searchParams.get("projectId");
 
-  const stylesForm = useForm({
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("project");
+
+  const form = useForm<StylesFormData>({
     defaultValues: {
-      images: [] as MoodBoardImage[],
-    },
-    validators: {
-      onSubmit: stylesFormSchema.parse,
+      images: [],
     },
   });
 
-  const images = stylesForm.state.values.images;
+  const { watch, setValue, getValues } = form;
+  const images = watch("images");
 
   const generateUploadUrl = useMutation(api.moodboard.generateUploadUrl);
   const removeMoodboardImage = useMutation(api.moodboard.removeMoodboardImage);
@@ -85,122 +85,129 @@ const useMoodBoard = (guideImages: MoodBoardImage[]) => {
 
   const uploadImage = useCallback(
     async (file: File) => {
-      const result = await tryCatch(
-        (async () => {
-          const uploadUrl = await generateUploadUrl();
+      try {
+        const uploadUrl = await generateUploadUrl();
 
-          const response = await tryCatch(
-            fetch(uploadUrl, {
-              method: "POST",
-              headers: { "Content-Type": file.type },
-              body: file,
+        const result = await fetch(uploadUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": file.type,
+          },
+          body: file,
+        });
+
+        if (!result.ok) {
+          log.error(`Upload Failed: ${result.statusText}`);
+          throw new Error(`Upload Failed: ${result.statusText}`);
+        }
+
+        const { storageId } = await result.json();
+
+        if (projectId && storageId) {
+          const addImageResult = await tryCatch(
+            addMoodboardImage({
+              projectId: projectId as Id<"projects">,
+              storageId: storageId as Id<"_storage">,
             })
           );
 
-          if (response.error || !response.data?.ok) {
-            throw new Error("Failed to upload image");
+          if (addImageResult.error) {
+            log.error(
+              addImageResult.error,
+              "Failed to add image to the server"
+            );
+            throw addImageResult.error;
           }
+        }
 
-          const jsonData = await response.data.json();
-          const storageId = jsonData.storageId as Id<"_storage">;
-
-          if (projectId) {
-            await addMoodboardImage({
-              projectId: projectId as Id<"projects">,
-              storageId,
-            });
-          }
-
-          return storageId;
-        })()
-      );
-
-      if (result.error) {
-        log.error({ error: result.error }, "Error uploading image");
-        toast.error("Failed to upload image");
-        return;
+        return { storageId };
+      } catch (error) {
+        log.error(error, "Failed to upload image");
+        throw error;
       }
-
-      return result.data;
     },
     [generateUploadUrl, addMoodboardImage, projectId]
   );
 
   useEffect(() => {
     if (guideImages && guideImages.length > 0) {
-      const serverImages = convertServerImages(guideImages);
-      const currentImages = stylesForm.state.values.images;
+      const serverImages = mapToServerImages(guideImages);
+      const currentImages = getValues("images");
 
       if (currentImages.length === 0) {
-        stylesForm.setFieldValue("images", serverImages);
+        setValue("images", serverImages);
       } else {
-        const mergedImages = mergeImages(currentImages, serverImages);
-        stylesForm.setFieldValue("images", mergedImages);
+        const merged = mergeImages(currentImages, serverImages);
+        setValue("images", merged);
       }
     }
-  }, [guideImages, stylesForm]);
+  }, [guideImages, setValue, getValues]);
 
-  const addFile = (file: File) => {
-    if (images.length >= MAX_MOODBOARD_IMAGES) {
-      toast.error(`You can only add up to ${MAX_MOODBOARD_IMAGES} images`);
+  const addImage = (file: File) => {
+    if (images.length >= MAX_IMAGES) {
+      log.error(`You can only add up to ${MAX_IMAGES} images`);
+      toast.error("You can only add up to 5 images", {
+        description: "Remove an image to add a new one",
+      });
       return;
     }
-    const newImage: MoodBoardImage = {
+
+    const newImage = {
       id: crypto.randomUUID(),
       file,
       preview: URL.createObjectURL(file),
-      storageId: "",
       uploaded: false,
       uploading: false,
       isFromServer: false,
     };
 
     const updatedImages = [...images, newImage];
-    stylesForm.setFieldValue("images", updatedImages);
+    setValue("images", updatedImages);
 
-    toast.success("Image added to moodboard");
+    toast.success("Image added to mood board", {
+      description:
+        "You can now generate a mood board from your image or add more images",
+    });
   };
 
   const removeImage = async (imageId: string) => {
     const imageToRemove = images.find((image) => image.id === imageId);
+
     if (!imageToRemove) {
-      log.error({ imageId }, "Image not found ");
       return;
     }
 
-    // If it's a server image with a storage id, remove it from the server (Convex)
+    // If it's a server image with storageId, remove from Convex
     if (imageToRemove.isFromServer && imageToRemove.storageId && projectId) {
       const result = await tryCatch(
         removeMoodboardImage({
-          storageId: imageToRemove.storageId as Id<"_storage">,
           projectId: projectId as Id<"projects">,
+          storageId: imageToRemove.storageId as Id<"_storage">,
         })
       );
 
       if (result.error) {
-        log.error(
-          { error: result.error },
-          "Error removing the image from the server"
-        );
-        toast.error("Failed to remove image from moodboard");
+        log.error(result.error, "Failed to remove image from the server");
+        toast.error("Failed to remove image from the server", {
+          description: "Please try again",
+        });
         return;
       }
     }
 
-    const updateImages = () =>
-      images.filter((image) => {
-        if (image.id === imageId) {
-          // Clean up preview URL only fot local images
-          if (!image.isFromServer && image.preview.startsWith("blob:")) {
-            URL.revokeObjectURL(image.preview);
-          }
-          return false;
+    const updatedImages = images.filter((image) => {
+      if (image.id === imageId) {
+        // Clean up preview URL if it's a local image
+        if (!image.isFromServer && image.preview.startsWith("blob:")) {
+          URL.revokeObjectURL(image.preview);
         }
-        return true;
-      });
+        return false;
+      }
+      return true;
+    });
 
-    stylesForm.setFieldValue("images", updateImages());
-    toast.success("Image removed");
+    setValue("images", updatedImages);
+    toast.success("Image removed from mood board");
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -217,42 +224,33 @@ const useMoodBoard = (guideImages: MoodBoardImage[]) => {
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
     setDragActive(false);
 
     const files = Array.from(e.dataTransfer.files);
-
     const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
     if (imageFiles.length === 0) {
-      toast.error("Please drop image files only!");
+      toast.error("Failed to add images to mood board", {
+        description: "Please drag and drop images only",
+      });
       return;
     }
 
+    // Add each image file
     for (const file of imageFiles) {
-      if (images.length <= MAX_MOODBOARD_IMAGES) {
-        addFile(file);
-      } else {
-        toast.error(`You can only add up to ${MAX_MOODBOARD_IMAGES} images`);
-        return;
+      if (images.length >= MAX_IMAGES) {
+        addImage(file);
       }
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
-    if (imageFiles.length === 0) {
-      toast.error("Please select image files only!");
-      return;
-    }
-
-    for (const file of imageFiles) {
-      if (images.length <= MAX_MOODBOARD_IMAGES) {
-        addFile(file);
-      } else {
-        toast.error(`You can only add up to ${MAX_MOODBOARD_IMAGES} images`);
-        return;
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        addImage(file);
       }
     }
 
@@ -260,84 +258,106 @@ const useMoodBoard = (guideImages: MoodBoardImage[]) => {
     e.target.value = "";
   };
 
-  const uploadSingleImage = useCallback(
-    async (
-      image: MoodBoardImage,
-      index: number,
-      currentImages: MoodBoardImage[]
-    ) => {
+  const updateImageById = useCallback(
+    (imageId: string, updates: Partial<MoodBoardImage>) => {
+      const currentImages = getValues("images");
+      const index = currentImages.findIndex((img) => img.id === imageId);
+      if (index === -1) {
+        return;
+      }
+      const updatedImages = [...currentImages];
+      updatedImages[index] = { ...updatedImages[index], ...updates };
+      setValue("images", updatedImages);
+    },
+    [getValues, setValue]
+  );
+
+  const markImageAsUploading = useCallback(
+    (imageId: string) => {
+      updateImageById(imageId, { uploading: true });
+    },
+    [updateImageById]
+  );
+
+  const handleUploadSuccess = useCallback(
+    (imageId: string, storageId: Id<"_storage"> | undefined) => {
+      updateImageById(imageId, {
+        storageId,
+        uploaded: true,
+        uploading: false,
+        isFromServer: true,
+      });
+    },
+    [updateImageById]
+  );
+
+  const handleUploadError = useCallback(
+    (imageId: string, error: Error) => {
+      log.error(error, "Failed to upload image");
+      updateImageById(imageId, {
+        error: error.message,
+        uploading: false,
+      });
+    },
+    [updateImageById]
+  );
+
+  const processImageUpload = useCallback(
+    async (image: MoodBoardImage) => {
       if (!image.file) {
         return;
       }
 
-      const updatedImages = [...currentImages];
-      updatedImages[index] = { ...image, uploading: true };
-      stylesForm.setFieldValue("images", updatedImages);
-
+      markImageAsUploading(image.id);
       const result = await tryCatch(uploadImage(image.file));
 
       if (result.error) {
-        log.error({ error: result.error }, "Error uploading image");
-        toast.error("Failed to upload image");
-        const errorImages = [...currentImages];
-        errorImages[index] = {
-          ...image,
-          uploading: false,
-          error: "Upload failed",
-        };
-        stylesForm.setFieldValue("images", errorImages);
+        handleUploadError(image.id, result.error);
         return;
       }
 
-      const storageId = result.data;
-      if (storageId) {
-        const successImages = [...currentImages];
-        successImages[index] = {
-          ...image,
-          uploading: false,
-          uploaded: true,
-          storageId,
-          isFromServer: true,
-        };
-        stylesForm.setFieldValue("images", successImages);
-      }
+      handleUploadSuccess(image.id, result.data?.storageId);
     },
-    [uploadImage, stylesForm.setFieldValue]
+    [uploadImage, markImageAsUploading, handleUploadError, handleUploadSuccess]
   );
 
   useEffect(() => {
     const uploadPendingImages = async () => {
-      const currentImages = stylesForm.state.values.images;
+      const currentImages = getValues("images");
+      const isPending = (img: MoodBoardImage) => {
+        const hasUploaded = img.uploaded;
+        const isUploading = img.uploading;
+        const hasError = !!img.error;
+        return !(hasUploaded || isUploading || hasError);
+      };
+      const pendingImages = currentImages.filter(isPending);
 
-      for (let i = 0; i < currentImages.length; i++) {
-        const image = currentImages[i];
-
-        if (!(image.uploaded || image.uploading || image.error) && image.file) {
-          await uploadSingleImage(image, i, currentImages);
-        }
+      for (const image of pendingImages) {
+        await processImageUpload(image);
       }
     };
 
     if (images.length > 0) {
       uploadPendingImages();
     }
-  }, [stylesForm.state.values.images, images.length, uploadSingleImage]);
+  }, [images, processImageUpload, getValues]);
 
-  useEffect(() => {
+  useEffect(() => () => {
     for (const image of images) {
       URL.revokeObjectURL(image.preview);
     }
-  }, [images]);
+  });
 
   return {
-    form: stylesForm,
+    form,
     images,
     dragActive,
+    addImage,
     removeImage,
     handleDrag,
     handleDrop,
     handleFileInput,
-    canAddMore: images.length < MAX_MOODBOARD_IMAGES,
+    canAddMore: images.length < MAX_IMAGES,
   };
 };
 
