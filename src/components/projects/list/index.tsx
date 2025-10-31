@@ -5,6 +5,7 @@ import { FolderCodeIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useProjectCreation } from "@/hooks/use-project";
 import { canvasPath, signInPath } from "@/paths";
 import type { ProjectSummary } from "@/redux/slices/projects";
@@ -16,8 +17,14 @@ const ProjectsList = () => {
   const { projects, canCreate } = useProjectCreation();
   const user = useAppSelector((state) => state.profile);
 
+  useEffect(() => {
+    if (!canCreate) {
+      router.push(signInPath());
+    }
+  }, [canCreate, router]);
+
   if (!canCreate) {
-    router.push(signInPath());
+    return null;
   }
 
   return (
