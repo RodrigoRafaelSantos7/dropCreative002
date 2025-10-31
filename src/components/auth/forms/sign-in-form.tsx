@@ -83,7 +83,7 @@ const SignInForm = () => {
                   <FieldLabel htmlFor={field.name}>Password</FieldLabel>
                   <Input
                     aria-invalid={isInvalid}
-                    autoComplete="password"
+                    autoComplete="current-password"
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
