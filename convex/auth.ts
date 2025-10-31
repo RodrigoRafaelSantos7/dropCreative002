@@ -1,7 +1,6 @@
 import { createClient, type GenericCtx } from "@convex-dev/better-auth";
 import { convex } from "@convex-dev/better-auth/plugins";
 import { betterAuth } from "better-auth";
-import { ConvexError } from "convex/values";
 import { components } from "./_generated/api";
 import type { DataModel } from "./_generated/dataModel";
 import { query } from "./_generated/server";
@@ -59,11 +58,7 @@ export const getCurrentUser = query({
     const user = await authComponent.getAuthUser(ctx);
 
     if (!user) {
-      throw new ConvexError({
-        code: 404,
-        message: "There is no authenticated user. Please sign in to continue.",
-        severity: "high",
-      });
+      return null;
     }
 
     return user;

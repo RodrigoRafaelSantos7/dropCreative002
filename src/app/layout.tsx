@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { jsonToConvex } from "convex/values";
 import { ProfileQuery } from "@/components/convex/query.config";
 import Providers from "@/components/providers";
-import { type ConvexRawUser, normalizeProfile } from "@/types/user";
+import { logger } from "@/lib/logger";
+import {
+  type ConvexRawUser,
+  normalizeProfile,
+  type Profile,
+} from "@/types/user";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,9 +32,16 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const rawProfile = await ProfileQuery();
-  const profile = normalizeProfile(
-    rawProfile?._valueJSON as unknown as ConvexRawUser | null
-  );
+  let profile: Profile | null = null;
+  if (rawProfile?._valueJSON) {
+    try {
+      const parsedJson = JSON.parse(rawProfile._valueJSON);
+      const convexValue = jsonToConvex(parsedJson);
+      profile = normalizeProfile(convexValue as ConvexRawUser);
+    } catch (error) {
+      logger.error({ error }, "Failed to parse or deserialize profile");
+    }
+  }
 
   return (
     <html lang="en" suppressHydrationWarning>

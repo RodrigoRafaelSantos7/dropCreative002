@@ -28,8 +28,9 @@ const Page = async ({ searchParams }: Props) => {
   const typographyGuide = guide?.typographySections || [];
 
   const existingMoodBoardImages = await MoodBoardImagesQuery(projectId);
-  const guideImages = existingMoodBoardImages.images
-    ._valueJSON as unknown as MoodBoardImage[];
+  const guideImages =
+    (existingMoodBoardImages.images
+      ?._valueJSON as unknown as MoodBoardImage[]) || [];
   return (
     <div>
       <TabsContent className="space-y-8" value="colours">

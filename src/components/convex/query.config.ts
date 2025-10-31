@@ -87,6 +87,14 @@ const SubscriptionEntitlementQuery = async (featureId: string) => {
       rawProfile?._valueJSON as unknown as ConvexRawUser | null
     );
 
+    if (!profile) {
+      throw new ConvexError({
+        code: 500,
+        message: "Failed to normalize user profile",
+        severity: "high",
+      });
+    }
+
     const entitlement = await fetchAction(
       api.subscription.hasEntitlement,
       {
@@ -218,7 +226,7 @@ const StyleGuideQuery = async (projectId: string) => {
 
     log.error(
       { error, projectId, errorMessage },
-      "Failed to fetch style guide"
+      "Failed to fetch mood board images"
     );
 
     throw new ConvexError({
@@ -228,7 +236,26 @@ const StyleGuideQuery = async (projectId: string) => {
     });
   }
 };
-
+/**
+ * Preloads mood board images for a specific project.
+ *
+ * Fetches the image collection associated with the given project ID,
+ * enabling server-side preloading for workspace pages. The mood board includes
+ * visual references and inspiration images that drive the design
+ * process and visual consistency across the design canvas.
+ *
+ * @param {string} projectId - String identifier of the project (cast to Convex Id type internally).
+ *                    Must correspond to an existing project in the database.
+ * @returns Object containing preloaded mood board images query handle for reactive updates.
+ * @throws ConvexError with 500 status if authentication fails, project doesn't exist,
+ *         or user lacks permission to access the project's mood board images.
+ *
+ * @remarks
+ * - Accepts string parameter for flexibility but casts to typed Id for type safety
+ * - Token-based auth ensures user has access rights to the requested project
+ * - Images are returned as a preloaded query handle for automatic reactivity
+ * - Does not validate project existence before query (Convex query will handle this)
+ */
 const MoodBoardImagesQuery = async (projectId: string) => {
   try {
     const images = await preloadQuery(

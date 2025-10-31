@@ -53,7 +53,7 @@ export const getMoodBoardImages = query({
     if (!authenticatedUser) {
       throw new ConvexError({
         code: 401,
-        message: "Unauthenticated. Please sign in to create a project.",
+        message: "Unauthenticated. Please sign in to upload images.",
         severity: "high",
       });
     }
@@ -167,7 +167,7 @@ export const generateUploadUrl = mutation({
     if (!authenticatedUser) {
       throw new ConvexError({
         code: 401,
-        message: "Unauthenticated. Please sign in to create a project.",
+        message: "Unauthenticated. Please sign in to upload images.",
         severity: "high",
       });
     }

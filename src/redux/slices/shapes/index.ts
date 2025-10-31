@@ -376,10 +376,6 @@ const shapesSlice = createSlice({
 
     removeShape(state, action: PayloadAction<string>) {
       const id = action.payload;
-      const shape = state.shapes.entities[id];
-      if (shape?.type === "frame") {
-        state.frameCounter = Math.max(0, state.frameCounter - 1);
-      }
       shapesAdapter.removeOne(state.shapes, id);
       delete state.selected[id];
     },
