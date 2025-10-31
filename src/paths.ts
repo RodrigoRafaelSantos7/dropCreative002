@@ -5,12 +5,14 @@ export const signInPath = () => "/auth/sign-in";
 export const signUpPath = () => "/auth/sign-up";
 
 // Protected
-export const dashboardPath = (route?: string) => `/dashboard/${route}`;
+export const dashboardPath = (route?: string) =>
+  route ? `/dashboard/${route}` : "/dashboard";
 
 export const canvasPath = (userSlug: string, projectSlug: string) =>
-  `/dashboard/${userSlug}/canvas?project=${projectSlug}`;
+  `/dashboard/${encodeURIComponent(userSlug)}/canvas?project=${encodeURIComponent(projectSlug)}`;
 
 export const styleGuidePath = (userSlug: string, projectSlug: string) =>
-  `/dashboard/${userSlug}/style-guide?project=${projectSlug}`;
+  `/dashboard/${encodeURIComponent(userSlug)}/style-guide?project=${encodeURIComponent(projectSlug)}`;
 
-export const billingPath = (profileName: string) => `/billing/${profileName}`;
+export const billingPath = (profileName: string) =>
+  `/billing/${encodeURIComponent(profileName)}`;

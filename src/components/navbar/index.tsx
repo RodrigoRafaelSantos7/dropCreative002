@@ -34,23 +34,27 @@ const Navbar = () => {
     projectId ? { projectId: projectId as Id<"projects"> } : "skip"
   );
 
-  const tabs: TabProps[] = [
-    {
-      label: "Canvas",
-      href: canvasPath(me.name, project?._id ?? ""),
-      icon: <HashIcon className="size-4" />,
-    },
-    {
-      label: "Style Guide",
-      href: styleGuidePath(me.name, project?._id ?? ""),
-      icon: <LayoutTemplateIcon className="size-4" />,
-    },
-  ];
+  const tabs: TabProps[] = project
+    ? [
+        {
+          label: "Canvas",
+          href: canvasPath(me.name, project._id),
+          icon: <HashIcon className="size-4" />,
+        },
+        {
+          label: "Style Guide",
+          href: styleGuidePath(me.name, project._id),
+          icon: <LayoutTemplateIcon className="size-4" />,
+        },
+      ]
+    : [];
 
   const pathname = usePathname();
   const hasCanvas = pathname.includes("canvas");
   const hasStyleGuide = pathname.includes("style-guide");
-  const pathnameWithProject = `${pathname}?project=${projectId}`;
+  const pathnameWithProject = projectId
+    ? `${pathname}?project=${projectId}`
+    : pathname;
   return (
     <nav className="fixed top-0 right-0 left-0 z-50 grid grid-cols-2 p-6 lg:grid-cols-3">
       <div className="flex items-center gap-4">
@@ -70,32 +74,34 @@ const Navbar = () => {
       </div>
 
       <div className="hidden items-center justify-center gap-2 lg:flex">
-        <div className="flex items-center gap-2 rounded-full border border-white/12 bg-white/8 p-2 saturate-150 backdrop-blur-xl">
-          {tabs.map((tab) => (
-            <Link
-              className={cn(
-                "group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
-                pathnameWithProject === tab.href
-                  ? "border border-white/16 bg-white/12 text-white backdrop-blur-sm"
-                  : "border border-transparent text-zinc-400 hover:bg-white/6 hover:text-zinc-200"
-              )}
-              href={tab.href}
-              key={tab.href}
-            >
-              <span
+        {project && (
+          <div className="flex items-center gap-2 rounded-full border border-white/12 bg-white/8 p-2 saturate-150 backdrop-blur-xl">
+            {tabs.map((tab) => (
+              <Link
                 className={cn(
-                  "",
+                  "group inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm transition",
                   pathnameWithProject === tab.href
-                    ? "opacity-100"
-                    : "opacity-70 group-hover:opacity-90"
+                    ? "border border-white/16 bg-white/12 text-white backdrop-blur-sm"
+                    : "border border-transparent text-zinc-400 hover:bg-white/6 hover:text-zinc-200"
                 )}
+                href={tab.href}
+                key={tab.href}
               >
-                {tab.icon}
-              </span>
-              <span>{tab.label}</span>
-            </Link>
-          ))}
-        </div>
+                <span
+                  className={cn(
+                    "",
+                    pathnameWithProject === tab.href
+                      ? "opacity-100"
+                      : "opacity-70 group-hover:opacity-90"
+                  )}
+                >
+                  {tab.icon}
+                </span>
+                <span>{tab.label}</span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="flex items-center justify-end gap-4">

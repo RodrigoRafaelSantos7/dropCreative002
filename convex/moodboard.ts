@@ -176,3 +176,86 @@ export const generateUploadUrl = mutation({
     return await ctx.storage.generateUploadUrl();
   },
 });
+
+/**
+ * Removes a moodboard image from a project.
+ *
+ * This mutation:
+ * - Authenticates the user before removing the image
+ * - Removes the image from the project's moodboard images
+ * - Deletes the image from the storage
+ * - Returns the number of remaining images in the project
+ *
+ * @param projectId - The ID of the project containing the moodboard image
+ * @param storageId - The ID of the storage file containing the moodboard image
+ * @returns The number of remaining images in the project
+ * @throws {ConvexError} 401 if the user is not authenticated, 403 if the user is not the owner of the project, 404 if the project is not found
+ *
+ * @example
+ * ```typescript
+ * const result = await ctx.runMutation(api.moodboard.removeMoodboardImage, {
+ *   projectId: "k1234...",
+ *   storageId: "s1234..."
+ * });
+ * // Returns: { success: true, imageCount: 1 }
+ * ```
+ */
+export const removeMoodboardImage = mutation({
+  args: {
+    projectId: v.id("projects"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, { projectId, storageId }) => {
+    // Authenticate user before proceeding with any database operations
+    // This ensures unauthorized users cannot probe for project existence
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to create a project.",
+        severity: "high",
+      });
+    }
+
+    const project = await ctx.db.get(projectId);
+
+    if (!project) {
+      throw new ConvexError({
+        code: 404,
+        message: "Project not found",
+        severity: "high",
+      });
+    }
+
+    if (project.userId !== authenticatedUser._id) {
+      throw new ConvexError({
+        code: 403,
+        message: "Access denied. You are not the owner of this project.",
+        severity: "high",
+      });
+    }
+
+    const currentImages = project.moodboardImages || [];
+
+    const updatedImages = currentImages.filter(
+      (imageId) => imageId !== storageId
+    );
+
+    await ctx.db.patch(projectId, {
+      moodboardImages: updatedImages,
+      lastModified: Date.now(),
+    });
+
+    try {
+      await ctx.storage.delete(storageId);
+    } catch (error) {
+      console.error("Failed to remove moodboard image", error);
+    }
+
+    return {
+      success: true,
+      imageCount: updatedImages.length,
+    };
+  },
+});

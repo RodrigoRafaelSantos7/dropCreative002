@@ -92,14 +92,6 @@ export const createProject = mutation({
       });
     }
 
-    if (!sketchData) {
-      throw new ConvexError({
-        code: 400,
-        message: "sketchData is required",
-        severity: "medium",
-      });
-    }
-
     const projectNumber = await getNextProjectNumber(ctx, userId);
     const projectName = name || `Project ${projectNumber}`;
     const timestamp = Date.now();
@@ -131,6 +123,9 @@ export const createProject = mutation({
  * Uses a separate counter table for O(1) performance and atomicity.
  * Counter state persists across project deletions, ensuring numbers are never reused.
  *
+ * Implements check-before-create pattern to prevent duplicate counter rows for the same userId.
+ * All operations run within a single mutation transaction for atomicity.
+ *
  * @param ctx - Mutation context
  * @param userId - User ID
  * @returns Next available project number for the user
@@ -148,30 +143,36 @@ async function getNextProjectNumber(
     });
   }
 
-  const counter = await ctx.db
+  // Check if counter already exists (atomic read within mutation transaction)
+  const existingCounter = await ctx.db
     .query("projects_counters")
     .withIndex("by_userId", (q) => q.eq("userId", userId))
     .first();
 
-  if (!counter) {
-    await ctx.db.insert("projects_counters", { userId, nextProjectNumber: 2 });
-    return 1;
-  }
+  // If counter exists, use it and increment
+  if (existingCounter) {
+    const projectNumber = existingCounter.nextProjectNumber;
 
-  const projectNumber = counter.nextProjectNumber;
+    // Data integrity check
+    if (typeof projectNumber !== "number" || projectNumber < 1) {
+      throw new ConvexError({
+        code: 500,
+        message: "Invalid counter state detected",
+        severity: "high",
+      });
+    }
 
-  // Data integrity check
-  if (typeof projectNumber !== "number" || projectNumber < 1) {
-    throw new ConvexError({
-      code: 500,
-      message: "Invalid counter state detected",
-      severity: "high",
+    await ctx.db.patch(existingCounter._id, {
+      nextProjectNumber: projectNumber + 1,
     });
+
+    return projectNumber;
   }
 
-  await ctx.db.patch(counter._id, { nextProjectNumber: projectNumber + 1 });
-
-  return projectNumber;
+  // Counter doesn't exist - create it atomically within this transaction
+  // Since mutations are atomic, concurrent requests will see this insert
+  await ctx.db.insert("projects_counters", { userId, nextProjectNumber: 2 });
+  return 1;
 }
 
 /**

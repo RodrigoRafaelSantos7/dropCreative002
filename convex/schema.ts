@@ -8,13 +8,13 @@ const schema = defineSchema({
     description: v.optional(v.string()),
     styleGuide: v.optional(v.string()),
     sketchData: v.any(), // JSON Structure from Redux Shapes State
-    viewportData: v.optional(v.any()), // JSON Structure for viewpoer state (scale,...)
+    viewportData: v.optional(v.any()), // JSON Structure for viewport state (scale,...)
     generatedDesignData: v.optional(v.any()), // JSON Structure for generated UI components
     thumbnail: v.optional(v.string()),
     moodboardImages: v.optional(v.array(v.id("_storage"))), // Storage IDs for moodboard images
     inspirationImages: v.optional(v.array(v.id("_storage"))), // Storage IDs for inspiration images (max. 6).
 
-    lastModified: v.number(), // Timestamo for Last Modification
+    lastModified: v.number(), // Timestamp for Last Modification
     createdAt: v.number(), // Project creation timestamp
     isPublic: v.boolean(), // Project visibility for sharing with other users
     projectNumber: v.number(), // Auto-incrementing project number per user
