@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import { api } from "./_generated/api";
-import { query } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
+import { authComponent } from "./auth";
 
 /**
  * Maximum number of moodboard images to process in a single query.
@@ -48,7 +48,15 @@ export const getMoodBoardImages = query({
   handler: async (ctx, { projectId }) => {
     // Authenticate user before proceeding with any database operations
     // This ensures unauthorized users cannot probe for project existence
-    const authenticatedUser = await ctx.runQuery(api.auth.getCurrentUser, {});
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to create a project.",
+        severity: "high",
+      });
+    }
 
     const project = await ctx.db.get(projectId);
 
@@ -60,9 +68,9 @@ export const getMoodBoardImages = query({
       });
     }
 
-    // Authorization: enforce access control before exposing any project data
-    // Users can only access their own projects or public projects
     if (project.userId !== authenticatedUser._id && !project.isPublic) {
+      // Authorization: enforce access control before exposing any project data
+      // Users can only access their own projects or public projects
       throw new ConvexError({
         code: 403,
         message:
@@ -78,9 +86,9 @@ export const getMoodBoardImages = query({
       ? project.moodboardImages
       : [];
 
-    // Enforce resource limits to prevent DoS attacks from projects with
-    // thousands of images, which could exhaust memory or request timeouts
     if (storageIds.length > MAX_MOODBOARD_IMAGES) {
+      // Enforce resource limits to prevent DoS attacks from projects with
+      // thousands of images, which could exhaust memory or request timeouts
       throw new ConvexError({
         code: 400,
         message: `Too many moodboard images. Maximum ${MAX_MOODBOARD_IMAGES} images allowed.`,
@@ -130,5 +138,41 @@ export const getMoodBoardImages = query({
     return images
       .filter((image): image is NonNullable<typeof image> => image !== null)
       .sort((a, b) => a.index - b.index);
+  },
+});
+
+/**
+ * Generates a signed upload URL for a moodboard image.
+ *
+ * This mutation:
+ * - Authenticates the user before generating the upload URL
+ * - Generates a signed upload URL that expires in 1 hour
+ * - Returns the signed upload URL
+ *
+ * @returns The signed upload URL
+ * @throws {ConvexError} 401 if the user is not authenticated
+ *
+ * @example
+ * ```typescript
+ * const uploadUrl = await ctx.runMutation(api.moodboard.generateUploadUrl, {});
+ * // Returns: "https://storage.convex.dev/..."
+ * ```
+ */
+export const generateUploadUrl = mutation({
+  handler: async (ctx) => {
+    // Authenticate user before proceeding with any database operations
+    // This ensures unauthorized users cannot probe for project existence
+    const authenticatedUser = await authComponent.getAuthUser(ctx);
+
+    if (!authenticatedUser) {
+      throw new ConvexError({
+        code: 401,
+        message: "Unauthenticated. Please sign in to create a project.",
+        severity: "high",
+      });
+    }
+
+    // Generate upload URL that expires in 1 hour
+    return await ctx.storage.generateUploadUrl();
   },
 });
