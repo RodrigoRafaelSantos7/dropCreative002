@@ -226,7 +226,7 @@ const StyleGuideQuery = async (projectId: string) => {
 
     log.error(
       { error, projectId, errorMessage },
-      "Failed to fetch mood board images"
+      "Failed to fetch style guide"
     );
 
     throw new ConvexError({
@@ -278,7 +278,7 @@ const MoodBoardImagesQuery = async (projectId: string) => {
 
     log.error(
       { error, projectId, errorMessage },
-      "Failed to fetch style guide"
+      "Failed to fetch mood board images"
     );
 
     throw new ConvexError({

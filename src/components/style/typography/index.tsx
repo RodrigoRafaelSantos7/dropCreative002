@@ -18,7 +18,7 @@ const StyleGuideTypography = ({
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           {section.styles.map((style) => (
             <div
-              className="rounded-2xl border border-white/8 bg-white/2 p-6 saturate-150 backdrop-blur-xl"
+              className="flex flex-col gap-6 rounded-2xl border border-white/8 bg-white/2 p-6 saturate-150 backdrop-blur-xl"
               key={style.name}
             >
               <div className="space-y-4">

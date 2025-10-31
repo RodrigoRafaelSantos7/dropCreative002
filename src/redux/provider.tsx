@@ -10,7 +10,7 @@ type ReduxProviderProps = {
 };
 
 const ReduxProvider = ({ children, preloadedState }: ReduxProviderProps) => {
-  const storeRef = useRef<ReturnType<typeof makeStore>>(null);
+  const storeRef = useRef<ReturnType<typeof makeStore> | null>(null);
   if (!storeRef.current) {
     storeRef.current = makeStore(preloadedState);
   }

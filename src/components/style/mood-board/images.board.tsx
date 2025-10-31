@@ -21,14 +21,14 @@ const UploadStatus = ({ uploading, uploaded, error }: UploadStatusProps) => {
 
   if (uploaded) {
     return (
-      <div className="absolute top-2 right-2">
+      <div className="absolute top-2 left-2">
         <CheckCircleIcon className="size-5 text-green-400" />
       </div>
     );
   }
   if (error) {
     return (
-      <div className="absolute top-2 right-2">
+      <div className="absolute top-2 left-2">
         <AlertCircleIcon className="size-5 text-destructive" />
       </div>
     );

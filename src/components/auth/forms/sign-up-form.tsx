@@ -108,7 +108,7 @@ const SignUpForm = () => {
                   <FieldLabel htmlFor={field.name}>Password</FieldLabel>
                   <Input
                     aria-invalid={isInvalid}
-                    autoComplete="password"
+                    autoComplete="new-password"
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
@@ -133,7 +133,7 @@ const SignUpForm = () => {
                   <FieldLabel htmlFor={field.name}>Confirm Password</FieldLabel>
                   <Input
                     aria-invalid={isInvalid}
-                    autoComplete="password"
+                    autoComplete="new-password"
                     id={field.name}
                     name={field.name}
                     onBlur={field.handleBlur}
